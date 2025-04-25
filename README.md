@@ -1,6 +1,4 @@
-# Image Categorization for Dermatology
-# Unibo_Doctors_Image_Categorization_Application
-
+# Unibo_Doctors_Application
 
 # Setting Up the DB
 sudo apt update   

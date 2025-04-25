@@ -20,4 +20,6 @@ python3 -m http.server 8080
 Running the Backend server  
 uvicorn app.main:app --reload  
 
+# Running the Project for the first time
+Move images from the Unibo_Doctors_Application/images/disease and Unibo_Doctors_Application/images/non-disease folders to Unibo_Doctors_Application/images
 

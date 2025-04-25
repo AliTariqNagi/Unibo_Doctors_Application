@@ -34,7 +34,7 @@ app = FastAPI()
 Ipp = [
     "http://localhost:8080",  # The origin where your frontend might be served
     "http://localhost:8000",  # Add the origin where your frontend is actually making requests from
-    # Add other origins if needed
+
 ]
 
 app.add_middleware(

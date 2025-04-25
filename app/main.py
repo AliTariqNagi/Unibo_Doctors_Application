@@ -21,8 +21,6 @@ from app.models import SessionLocal  # Import SessionLocal
 from sqlalchemy import inspect, text  # Import inspect and text
 from app.models import Doctor, SessionLocal
 from fastapi.responses import FileResponse
-# No need to recreate tables here, model.py does it
-# Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()

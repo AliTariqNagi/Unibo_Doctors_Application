@@ -3,7 +3,7 @@
 
 
 # Setting Up the DB
-sudo apt update
+sudo apt update   
 sudo apt install postgresql postgresql-contrib
 sudo systemctl status postgresql
 sudo -i -u postgres

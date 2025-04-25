@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View/Edit Images Details</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .disease-selection {
+            width: 300px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #551A8B;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #440077;
+        }
+        .home-button {
+            display: block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-decoration: none;
+            text-align: center;
+            width: 100px;
+        }
+        .home-button:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>View/Edit Images Details</h1>
+    <div class="disease-selection">
+        <label for="selectedDisease">Select Disease:</label>
+        <select id="selectedDisease" name="selectedDisease">
+            <option value="">-- Select a Disease --</option>
+            <option value="acne">Acne</option>
+            <option value="eczema">Eczema</option>
+            <option value="psoriasis">Psoriasis</option>
+            <option value="melanoma">Melanoma</option>
+            </select>
+        <button onclick="loadDiseaseImages()">View Images</button>
+    </div>
+    <a href="/" class="home-button">Home</a>
+
+    <script>
+        function loadDiseaseImages() {
+            const selectedDisease = document.getElementById('selectedDisease').value;
+            if (selectedDisease) {
+                window.location.href = `/view_disease_images?disease=${selectedDisease}`;
+            } else {
+                alert('Please select a disease.');
+            }
+        }
+
+        // In a real application, you would fetch the list of diseases from your backend
+        // and dynamically populate the <select> element.
+        // Example (not functional without backend):
+        /*
+        fetch('/api/diseases')
+            .then(response => response.json())
+            .then(data => {
+                const selectElement = document.getElementById('selectedDisease');
+                data.forEach(disease => {
+                    const option = document.createElement('option');
+                    option.value = disease.id; // Or a suitable identifier
+                    option.textContent = disease.name;
+                    selectElement.appendChild(option);
+                });
+            });
+        */
+    </script>
+</body>
+</html>

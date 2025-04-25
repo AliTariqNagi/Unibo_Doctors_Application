@@ -1,0 +1,1576 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validate Images</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .validation-form {
+            width: 400px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"],
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        select {
+            appearance: none; /* Remove default arrow for better styling */
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="%23333" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 8px top 50%;
+            padding-right: 25px;
+        }
+        .radio-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .radio-group label {
+            font-weight: normal;
+        }
+        button[type="submit"] {
+            background-color: #551A8B;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button[type="submit"]:hover {
+            background-color: #440077;
+        }
+        .home-button {
+            display: block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-decoration: none;
+            text-align: center;
+            width: 100px;
+        }
+        .home-button:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Validate Images</h1>
+    <form class="validation-form" id="validationForm">
+        <div class="form-group">
+            <label for="imageUpload">Upload Image:</label>
+            <input type="file" id="imageUpload" name="imageUpload" accept="image/*" required>
+        </div>
+        <div class="form-group">
+            <label for="diseaseName">Disease Name:</label>
+            <input type="text" id="diseaseName" name="diseaseName" required>
+        </div>
+        <div class="form-group">
+            <label for="doctorName">Doctor's Name:</label>
+            <select id="doctorName" name="doctorName" required>
+                <option value="">-- Select Doctor --</option>
+                </select>
+        </div>
+        <div class="form-group">
+            <label for="rating">Rating (1 to 5):</label>
+            <input type="number" id="rating" name="rating" min="1" max="5" required>
+        </div>
+        <div class="form-group">
+            <label for="comments">Comments:</label>
+            <textarea id="comments" name="comments"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Image Status:</label>
+            <div class="radio-group">
+                <input type="radio" id="validated" name="validationStatus" value="validated" required>
+                <label for="validated">Validated</label>
+                <input type="radio" id="invalidated" name="validationStatus" value="invalidated" required>
+                <label for="invalidated">Invalidated</label>
+            </div>
+        </div>
+        <button type="submit">Submit Validation</button>
+    </form>
+    <a href="/" class="home-button">Home</a>
+
+    <script>
+        // In a real application, you would fetch the list of registered doctors
+        // from your backend and populate the <select> element.
+        fetch('/api/doctors') // Replace with your actual API endpoint
+            .then(response => response.json())
+            .then(data => {
+                const doctorSelect = document.getElementById('doctorName');
+                data.forEach(doctor => {
+                    const option = document.createElement('option');
+                    option.value = doctor.id; // Or a unique identifier for the doctor
+                    option.textContent = doctor.doctorName;
+                    doctorSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching doctors:', error));
+
+        document.getElementById('validationForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            // In a real application, you would send this data (including the image file)
+            // to your FastAPI backend for processing.
+            const data = Object.fromEntries(formData);
+            console.log('Validation Data:', data);
+            // Example (not functional without backend file upload handling):
+            /*
+            fetch('/api/validate_image', {
+                method: 'POST',
+                body: formData, // Important for file uploads
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert('Image validation submitted!');
+                document.getElementById('validationForm').reset();
+            })
+            .catch(error => {
+                console.error('Error validating image:', error);
+                alert('Error during image validation.');
+            });
+            */
+        });
+    </script>
+</body>
+</html> -->
+<!-- <!DOCTYPE html>
+<html>
+    <head>
+        <title>Validate Image</title>
+    </head>
+    <body>
+        <h1>Validate Image</h1>
+        <img id="targetImage" src="" alt="First Image" style="max-width:500px;">
+        <p>Doctor's Name: <input type="text" id="doctor_name"></p>
+        <p>Rating: <input type="number" id="rating" min="1" max="5"></p>
+        <p>Comments: <textarea id="comments"></textarea></p>
+        <p>Disease Name: <input type="text" id="disease_name"></p>
+        <p>Category:
+            <select id="category">
+                <option value="disease">Disease</option>
+                <option value="non_disease">Non-Disease</option>
+            </select>
+        </p>
+        <button id="next_image_button" data-image-id="">Next Image</button>
+
+        <script>
+            const nextButton = document.getElementById('next_image_button');
+            let currentImageId = null; // Store the current image ID
+            const backendUrl = 'http://localhost:8000'; // Define the backend URL
+
+            // Function to fetch and display the first image
+            function fetchFirstImage() {
+                fetch(`${backendUrl}/first_image/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        currentImageId = data.id; // Store the ID
+                        nextButton.setAttribute('data-image-id', currentImageId);
+                        const imageContainer = document.getElementById('targetImage');
+                        // Construct the image URL using the image_path from the backend
+                        imageContainer.src = `${backendUrl}/${data.image_path}`;
+                        imageContainer.alt = `Image ${data.id}`;
+
+                    })
+                    .catch(error => {
+                        console.error('Error fetching first image:', error);
+                        alert('Failed to load first image. Please check console.');
+                        document.body.innerHTML = "<h1>Failed to load initial image. Check console for errors.</h1>";
+                    });
+            }
+
+            // Call fetchFirstImage when the page loads
+            fetchFirstImage();
+
+            nextButton.addEventListener('click', () => {
+                const doctorName = document.getElementById('doctor_name').value;
+                const rating = document.getElementById('rating').value;
+                const comments = document.getElementById('comments').value;
+                const diseaseName = document.getElementById('disease_name').value;
+                const category = document.getElementById('category').value;
+
+
+                fetch(`${backendUrl}/next_image/${currentImageId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                document.body.innerHTML = "<h1>No more images to validate.</h1>";
+                                return;
+                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Update the page with the new image and data
+                        const imageContainer = document.getElementById('targetImage');
+                        // Construct the image URL using image_url
+                        imageContainer.src = `${backendUrl}/${data.image_path}`;
+                        imageContainer.alt = `Image ${data.next_image_id}`;
+                        currentImageId = data.next_image_id;  // IMPORTANT: Update currentImageId
+                        nextButton.setAttribute('data-image-id', currentImageId);
+
+                        // Clear previous input values
+                        document.getElementById('doctor_name').value = '';
+                        document.getElementById('rating').value = '';
+                        document.getElementById('comments').value = '';
+                        document.getElementById('disease_name').value = '';
+                        document.getElementById('category').value = 'disease';
+
+                        // Send the data to the backend
+                        fetch(`${backendUrl}/validate_image/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                doctor_name: doctorName,
+                                rating: rating,
+                                comments: comments,
+                                disease_name: diseaseName,
+                                category: category,
+                                image_id: currentImageId, // Send the current Image ID
+                            }),
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to send data to backend');
+                            }
+                            return response.json();
+                        })
+                        .then(response_data => {
+                            console.log('Data sent successfully:', response_data);
+                        })
+                        .catch(error => {
+                            console.error('Error sending data:', error);
+                            alert('Error sending data. Please check console.');
+                        });
+
+
+                    })
+                    .catch(error => {
+                        console.error('Error fetching next image:', error);
+                        alert('Failed to load next image. Please check console.');
+                    });
+            });
+        </script>
+    </body>
+</html> -->
+
+
+<!-- <!DOCTYPE html>
+<html>
+    <head>
+        <title>Categorize Image</title>
+        <style>
+            body { font-family: sans-serif; }
+            #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+            img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
+            label { display: block; margin-bottom: 5px; font-weight: bold; }
+            input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+            button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
+            #next_image_button { margin-top: 10px; }
+            #message-container { margin-top: 20px; font-weight: bold; }
+            .backend-routes {
+                margin-top: 20px;
+                padding: 15px;
+                border: 1px solid #eee;
+                background-color: #f9f9f9;
+                border-radius: 5px;
+            }
+            .backend-routes h2 {
+                margin-top: 0;
+                margin-bottom: 10px;
+            }
+            .backend-routes ul {
+                padding-left: 20px;
+                margin-bottom: 0;
+            }
+            .backend-routes li {
+                margin-bottom: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="categorization-form">
+            <h1>Categorize Image</h1>
+            <img id="targetImage" src="" alt="Image to categorize">
+            <form id="categorizationForm">
+                <input type="hidden" id="image_id" name="image_id">
+                <div>
+                    <label for="doctor_name">Doctor's Name:</label>
+                    <input type="text" id="doctor_name" name="doctor_name" required>
+                </div>
+                <div>
+                    <label for="rating">Rating (1-5):</label>
+                    <input type="number" id="rating" name="rating" min="1" max="5" required>
+                </div>
+                <div>
+                    <label for="comments">Comments:</label>
+                    <textarea id="comments" name="comments"></textarea>
+                </div>
+                <div>
+                    <label for="disease_name">Disease Name:</label>
+                    <input type="text" id="disease_name" name="disease_name" required>
+                </div>
+                <div>
+                    <label for="category">Category:</label>
+                    <select id="category" name="category">
+                        <option value="disease">Disease</option>
+                        <option value="non-disease">Non-Disease</option>
+                    </select>
+                </div>
+                <button type="button" id="submit_button">Submit</button>
+                <button type="button" id="next_image_button">Next Image</button>
+            </form>
+            <div id="message-container"></div>
+        </div>
+
+        <div class="backend-routes">
+            <h2>Backend Server Routes (http://127.0.0.1:8000)</h2>
+            <ul>
+                <li><strong>GET /categorize_image/</strong>: Retrieves the first uncategorized image.</li>
+                <li><strong>GET /categorize_image/&#123;current_image_id&#125;</strong>: Retrieves the next uncategorized image after the image with the given ID.</li>
+                <li><strong>POST /categorize_image/</strong>: Submits the categorization details for the current image, saves them to the database, and moves the image file. Requires form data: <code>image_id</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
+                <li><strong>/images/&#123;path_to_image&#125;</strong>: Serves static image files from the <code>images</code> directory.</li>
+            </ul>
+        </div>
+
+        <script>
+            const targetImage = document.getElementById('targetImage');
+            const imageIdInput = document.getElementById('image_id');
+            const doctorNameInput = document.getElementById('doctor_name');
+            const ratingInput = document.getElementById('rating');
+            const commentsInput = document.getElementById('comments');
+            const diseaseNameInput = document.getElementById('disease_name');
+            const categorySelect = document.getElementById('category');
+            const submitButton = document.getElementById('submit_button');
+            const nextButton = document.getElementById('next_image_button');
+            const messageContainer = document.getElementById('message-container');
+            const backendUrl = 'http://localhost:8000';
+            let currentImageId = null;
+
+            function fetchAndDisplayImage() {
+                fetch(`${backendUrl}/categorize_image/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        currentImageId = data.id;
+                        imageIdInput.value = data.id;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${data.id}`;
+                        messageContainer.textContent = ''; // Clear any previous messages
+                        // Clear the form for the new image
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching first image:', error);
+                        messageContainer.textContent = 'Failed to load initial image. Please check console.';
+                        targetImage.style.display = 'none'; // Hide image if loading fails
+                        document.getElementById('categorizationForm').style.display = 'none'; // Hide form as well
+                    });
+            }
+
+            fetchAndDisplayImage(); // Load the first image on page load
+
+            submitButton.addEventListener('click', () => {
+                if (!currentImageId) {
+                    alert('No image to submit.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('image_id', currentImageId);
+                formData.append('doctor_name', doctorNameInput.value);
+                formData.append('rating', ratingInput.value);
+                formData.append('comments', commentsInput.value);
+                formData.append('disease_name', diseaseNameInput.value);
+                formData.append('category', categorySelect.value);
+
+                fetch(`${backendUrl}/categorize_image/`, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    messageContainer.textContent = data.message;
+                    // After successful submission, fetch the next image
+                    fetchNextImage();
+                })
+                .catch(error => {
+                    console.error('Error categorizing image:', error);
+                    messageContainer.textContent = 'Failed to categorize image. Please check console.';
+                });
+            });
+
+            nextButton.addEventListener('click', () => {
+                fetchNextImage();
+            });
+
+            function fetchNextImage() {
+                if (currentImageId === null) {
+                    alert('No current image ID.');
+                    return;
+                }
+
+                fetch(`${backendUrl}/categorize_image/${currentImageId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                messageContainer.textContent = 'No more images to categorize.';
+                                targetImage.src = '';
+                                targetImage.alt = '';
+                                imageIdInput.value = '';
+                                // Optionally disable buttons
+                                submitButton.disabled = true;
+                                nextButton.disabled = true;
+                                return null; // Indicate no more images
+                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data) {
+                            currentImageId = data.id;
+                            imageIdInput.value = data.id;
+                            targetImage.src = `${backendUrl}/${data.image_path}`;
+                            targetImage.alt = `Image ${data.id}`;
+                            messageContainer.textContent = ''; // Clear previous message
+                            // Clear the form for the new image
+                            doctorNameInput.value = '';
+                            ratingInput.value = '';
+                            commentsInput.value = '';
+                            diseaseNameInput.value = '';
+                            categorySelect.value = 'disease';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching next image:', error);
+                        messageContainer.textContent = 'Failed to load next image. Please check console.';
+                        targetImage.style.display = 'none'; // Hide image if loading fails
+                        document.getElementById('categorizationForm').style.display = 'none'; // Hide form as well
+                    });
+            }
+        </script>
+    </body>
+</html> -->
+
+
+<!-- 
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Categorize Image</title>
+        <style>
+            body { font-family: sans-serif; }
+            #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+            img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
+            label { display: block; margin-bottom: 5px; font-weight: bold; }
+            input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+            button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
+            #next_image_button { margin-top: 10px; }
+            #message-container { margin-top: 20px; font-weight: bold; }
+            .backend-routes {
+                margin-top: 20px;
+                padding: 15px;
+                border: 1px solid #eee;
+                background-color: #f9f9f9;
+                border-radius: 5px;
+            }
+            .backend-routes h2 {
+                margin-top: 0;
+                margin-bottom: 10px;
+            }
+            .backend-routes ul {
+                padding-left: 20px;
+                margin-bottom: 0;
+            }
+            .backend-routes li {
+                margin-bottom: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="categorization-form">
+            <h1>Categorize Image</h1>
+            <img id="targetImage" src="" alt="Image to categorize">
+            <form id="categorizationForm">
+                <input type="hidden" id="image_id" name="image_id">
+                <div>
+                    <label for="doctor_name">Doctor's Name:</label>
+                    <input type="text" id="doctor_name" name="doctor_name" required>
+                </div>
+                <div>
+                    <label for="rating">Rating (1-5):</label>
+                    <input type="number" id="rating" name="rating" min="1" max="5" required>
+                </div>
+                <div>
+                    <label for="comments">Comments:</label>
+                    <textarea id="comments" name="comments"></textarea>
+                </div>
+                <div>
+                    <label for="disease_name">Disease Name:</label>
+                    <input type="text" id="disease_name" name="disease_name" required>
+                </div>
+                <div>
+                    <label for="category">Category:</label>
+                    <select id="category" name="category">
+                        <option value="disease">Disease</option>
+                        <option value="non-disease">Non-Disease</option>
+                    </select>
+                </div>
+                <button type="button" id="submit_button">Submit</button>
+                <button type="button" id="next_image_button">Next Image</button>
+            </form>
+            <div id="message-container"></div>
+        </div>
+
+        <div class="backend-routes">
+            <h2>Backend Server Routes (http://localhost:8000)</h2>
+            <ul>
+                <li><strong>GET /categorize_image/</strong>: Retrieves the first uncategorized image.</li>
+                <li><strong>GET /categorize_image/&#123;current_image_id&#125;</strong>: Retrieves the next uncategorized image after the image with the given ID.</li>
+                <li><strong>POST /categorize_image/</strong>: Submits the categorization details for the current image, saves them to the database, and moves the image file. Requires form data: <code>image_id</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
+                <li><strong>/images/&#123;path_to_image&#125;</strong>: Serves static image files from the <code>images</code> directory.</li>
+            </ul>
+        </div>
+
+        <script>
+            const targetImage = document.getElementById('targetImage');
+            const imageIdInput = document.getElementById('image_id');
+            const doctorNameInput = document.getElementById('doctor_name');
+            const ratingInput = document.getElementById('rating');
+            const commentsInput = document.getElementById('comments');
+            const diseaseNameInput = document.getElementById('disease_name');
+            const categorySelect = document.getElementById('category');
+            const submitButton = document.getElementById('submit_button');
+            const nextButton = document.getElementById('next_image_button');
+            const messageContainer = document.getElementById('message-container');
+            const backendUrl = 'http://localhost:8000';
+            let currentImageId = null;
+
+            function fetchAndDisplayImage() {
+                fetch(`${backendUrl}/categorize_image/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        currentImageId = data.id;
+                        imageIdInput.value = data.id;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${data.id}`;
+                        messageContainer.textContent = ''; // Clear any previous messages
+                        // Clear the form for the new image
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching first image:', error);
+                        messageContainer.textContent = 'Failed to load initial image. Please check console.';
+                        targetImage.style.display = 'none'; // Hide image if loading fails
+                        document.getElementById('categorizationForm').style.display = 'none'; // Hide form as well
+                    });
+            }
+
+            fetchAndDisplayImage(); // Load the first image on page load
+
+            submitButton.addEventListener('click', () => {
+                if (!currentImageId) {
+                    alert('No image to submit.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('image_id', currentImageId);
+                formData.append('doctor_name', doctorNameInput.value);
+                formData.append('rating', ratingInput.value);
+                formData.append('comments', commentsInput.value);
+                formData.append('disease_name', diseaseNameInput.value);
+                formData.append('category', categorySelect.value);
+
+                fetch(`${backendUrl}/categorize_image/`, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    messageContainer.textContent = data.message;
+                    // After successful submission, fetch the next image
+                    fetchNextImage();
+                })
+                .catch(error => {
+                    console.error('Error categorizing image:', error);
+                    messageContainer.textContent = 'Failed to categorize image. Please check console.';
+                });
+            });
+
+            nextButton.addEventListener('click', () => {
+                fetchNextImage();
+            });
+
+            function fetchNextImage() {
+                if (currentImageId === null) {
+                    alert('No current image ID.');
+                    return;
+                }
+
+                fetch(`${backendUrl}/categorize_image/${currentImageId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                messageContainer.textContent = 'No more images to categorize.';
+                                targetImage.src = '';
+                                targetImage.alt = '';
+                                imageIdInput.value = '';
+                                // Optionally disable buttons
+                                submitButton.disabled = true;
+                                nextButton.disabled = true;
+                                return null; // Indicate no more images
+                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data) {
+                            currentImageId = data.id;
+                            imageIdInput.value = data.id;
+                            targetImage.src = `${backendUrl}/${data.image_path}`;
+                            targetImage.alt = `Image ${data.id}`;
+                            messageContainer.textContent = ''; // Clear previous message
+                            // Clear the form for the new image
+                            doctorNameInput.value = '';
+                            ratingInput.value = '';
+                            commentsInput.value = '';
+                            diseaseNameInput.value = '';
+                            categorySelect.value = 'disease';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching next image:', error);
+                        messageContainer.textContent = 'Failed to load next image. Please check console.';
+                        targetImage.style.display = 'none'; // Hide image if loading fails
+                        document.getElementById('categorizationForm').style.display = 'none'; // Hide form as well
+                    });
+            }
+        </script>
+    </body>
+</html> -->
+
+
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Categorize Image</title>
+    <style> /* ... (your CSS) ... */ </style>
+</head>
+<body>
+    <div id="categorization-form">
+        <h1>Categorize Image</h1>
+        <img id="targetImage" src="" alt="Image to categorize">
+        <form id="categorizationForm">
+            <input type="hidden" id="current_filename" name="current_filename">
+            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required></div>
+            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required></div>
+            <div><label for="comments">Comments:</label><textarea id="comments" name="comments"></textarea></div>
+            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required></div>
+            <div><label for="category">Category:</label><select id="category" name="category"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
+            <button type="button" id="submit_button">Submit</button>
+            <button type="button" id="next_image_button">Next Image</button>
+        </form>
+        <div id="message-container"></div>
+    </div>
+    <div class="backend-routes">
+        <h2>Backend Server Routes (http://localhost:8000)</h2>
+        <ul>
+            <li><strong>GET /categorize_image/</strong>: Retrieves the first image filename from the 'images' directory.</li>
+            <li><strong>GET /categorize_image/&#123;current_displayed_filename&#125;</strong>: Retrieves the next image filename from the 'images' directory.</li>
+            <li><strong>POST /categorize_image/</strong>: Submits the categorization details, creates a database entry, and moves the image. Requires form data: <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
+            <li><strong>/images/&#123;path_to_image&#125;</strong>: Serves static image files.</li>
+        </ul>
+    </div>
+
+    <script>
+        const targetImage = document.getElementById('targetImage');
+        const currentFilenameInput = document.getElementById('current_filename');
+        const doctorNameInput = document.getElementById('doctor_name');
+        const ratingInput = document.getElementById('rating');
+        const commentsInput = document.getElementById('comments');
+        const diseaseNameInput = document.getElementById('disease_name');
+        const categorySelect = document.getElementById('category');
+        const submitButton = document.getElementById('submit_button');
+        const nextButton = document.getElementById('next_image_button');
+        const messageContainer = document.getElementById('message-container');
+        const backendUrl = 'http://localhost:8000';
+        let currentFilename = null;
+        let currentImageId = null; // Store the ID after submission
+
+        function fetchAndDisplayImage() {
+            fetch(`${backendUrl}/categorize_image/`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No images to categorize found.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        currentFilename = data.image_path.split('/').pop();
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null; // Reset ID for the new image
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching first image:', error);
+                    messageContainer.textContent = 'Failed to load initial image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+
+        fetchAndDisplayImage();
+
+        submitButton.addEventListener('click', () => {
+            if (!currentFilename) {
+                alert('No image to submit.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('doctor_name', doctorNameInput.value);
+            formData.append('rating', ratingInput.value);
+            formData.append('comments', commentsInput.value);
+            formData.append('disease_name', diseaseNameInput.value);
+            formData.append('category', categorySelect.value);
+
+            fetch(`${backendUrl}/categorize_image/`, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                messageContainer.textContent = data.message;
+                currentImageId = data.image_id; // Store the newly created ID
+                fetchNextImage();
+            })
+            .catch(error => {
+                console.error('Error categorizing image:', error);
+                messageContainer.textContent = 'Failed to categorize image. Please check console.';
+            });
+        });
+
+        nextButton.addEventListener('click', () => {
+            if (!currentFilename) {
+                alert('No current image.');
+                return;
+            }
+            fetchNextImage();
+        });
+
+        function fetchNextImage() {
+            fetch(`${backendUrl}/categorize_image/${currentFilename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No more images to categorize.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        currentFilename = data.image_path.split('/').pop();
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null; // Reset ID for the new image
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching next image:', error);
+                    messageContainer.textContent = 'Failed to load next image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Categorize Image</title>
+    <style>
+        body { font-family: sans-serif; }
+        #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
+        #next_image_button { margin-top: 10px; }
+        #message-container { margin-top: 20px; font-weight: bold; }
+        .backend-routes {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .backend-routes h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .backend-routes ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        .backend-routes li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="categorization-form">
+        <h1>Categorize Image</h1>
+        <img id="targetImage" src="" alt="Image to categorize">
+        <form id="categorizationForm">
+            <input type="hidden" id="current_filename" name="current_filename">
+            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required></div>
+            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required></div>
+            <div><label for="comments">Comments:</label><textarea id="comments" name="comments"></textarea></div>
+            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required></div>
+            <div><label for="category">Category:</label><select id="category" name="category"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
+            <button type="button" id="submit_button">Submit</button>
+            <button type="button" id="next_image_button">Next Image</button>
+        </form>
+        <div id="message-container"></div>
+    </div>
+    <div class="backend-routes">
+        <h2>Backend Server Routes (http://localhost:8000)</h2>
+        <ul>
+            <li><strong>GET /categorize_image/</strong>: Retrieves the first image filename from the 'images' directory.</li>
+            <li><strong>GET /categorize_image/&#123;current_displayed_filename&#125;</strong>: Retrieves the next image filename from the 'images' directory.</li>
+            <li><strong>POST /categorize_image/</strong>: Submits the categorization details, creates a database entry, and moves the image. Requires form data: <code>current_filename</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
+            <li><strong>/images/&#123;path_to_image&#125;</strong>: Serves static image files.</li>
+        </ul>
+    </div>
+
+    <script>
+        const targetImage = document.getElementById('targetImage');
+        const currentFilenameInput = document.getElementById('current_filename');
+        const doctorNameInput = document.getElementById('doctor_name');
+        const ratingInput = document.getElementById('rating');
+        const commentsInput = document.getElementById('comments');
+        const diseaseNameInput = document.getElementById('disease_name');
+        const categorySelect = document.getElementById('category');
+        const submitButton = document.getElementById('submit_button');
+        const nextButton = document.getElementById('next_image_button');
+        const messageContainer = document.getElementById('message-container');
+        const backendUrl = 'http://localhost:8000';
+        let currentFilename = null;
+        let currentImageId = null; // Store the ID after submission
+
+        function fetchAndDisplayImage() {
+            console.log('fetchAndDisplayImage() called!');
+            fetch(`${backendUrl}/categorize_image/`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No images to categorize found.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('fetchAndDisplayImage() - Received data:', data);
+                    if (data && data.image_path) {
+                        currentFilename = data.image_path.split('/').pop();
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null;
+                    } else {
+                        console.log('fetchAndDisplayImage() - Data is null or missing image_path:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching first image:', error);
+                    messageContainer.textContent = 'Failed to load initial image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+
+        fetchAndDisplayImage();
+
+        submitButton.addEventListener('click', () => {
+            if (!currentFilename) {
+                alert('No image to submit.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('current_filename', currentFilename);
+            formData.append('doctor_name', doctorNameInput.value);
+            formData.append('rating', ratingInput.value);
+            formData.append('comments', commentsInput.value);
+            formData.append('disease_name', diseaseNameInput.value);
+            formData.append('category', categorySelect.value);
+
+            fetch(`${backendUrl}/categorize_image/`, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                messageContainer.textContent = data.message;
+                currentImageId = data.image_id;
+                fetchNextImage();
+                console.log('After fetchNextImage() call in submit - currentFilename:', currentFilename);
+            })
+            .catch(error => {
+                console.error('Error categorizing image:', error);
+                messageContainer.textContent = 'Failed to categorize image. Please check console.';
+            });
+
+        });
+
+        nextButton.addEventListener('click', () => {
+            console.log('nextButton clicked - currentFilename:', currentFilename);
+            if (!currentFilename) {
+                alert('No current image.');
+                return;
+            }
+            fetchNextImage();
+        });
+
+        function fetchNextImage() {
+            if (!currentFilename) {
+                console.log('fetchNextImage() - No currentFilename.');
+                return;
+            }
+            console.log('fetchNextImage() called with currentFilename:', currentFilename);
+            fetch(`${backendUrl}/categorize_image/${currentFilename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        console.log('fetchNextImage() - Response not OK:', response);
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No more images to categorize.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    console.log('fetchNextImage() - Response OK');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('fetchNextImage() - Received data:', data);
+                    if (data && data.image_path) {
+                        const newFilename = data.image_path.split('/').pop();
+                        console.log('fetchNextImage() - New filename extracted:', newFilename);
+                        currentFilename = newFilename;
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null;
+                    } else {
+                        console.log('fetchNextImage() - Data is null or missing image_path:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching next image:', error);
+                    messageContainer.textContent = 'Failed to load next image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html> -->
+
+
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Categorize Image</title>
+    <style>
+        body { font-family: sans-serif; }
+        #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
+        #next_image_button { margin-top: 10px; }
+        #message-container { margin-top: 20px; font-weight: bold; }
+        .backend-routes {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .backend-routes h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .backend-routes ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        .backend-routes li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="categorization-form">
+        <h1>Categorize Image</h1>
+        <img id="targetImage" src="" alt="Image to categorize">
+        <form id="categorizationForm">
+            <input type="hidden" id="current_filename" name="current_filename">
+            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required></div>
+            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required></div>
+            <div><label for="comments">Comments:</label><textarea id="comments" name="comments"></textarea></div>
+            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required></div>
+            <div><label for="category">Category:</label><select id="category" name="category"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
+            <button type="button" id="submit_button">Submit</button>
+            <button type="button" id="next_image_button">Next Image</button>
+        </form>
+        <div id="message-container"></div>
+    </div>
+    <div class="backend-routes">
+        <h2>Backend Server Routes (http://localhost:8000)</h2>
+        <ul>
+            <li><strong>GET /categorize_image/</strong>: Retrieves the first image filename from the 'images' directory.</li>
+            <li><strong>GET /categorize_image/&#123;current_displayed_filename&#125;</strong>: Retrieves the next image filename from the 'images' directory.</li>
+            <li><strong>POST /categorize_image/</strong>: Submits the categorization details, creates a database entry, and moves the image. Requires form data: <code>current_filename</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
+            <li><strong>/images/&#123;path_to_image&#125;</strong>: Serves static image files.</li>
+        </ul>
+    </div>
+
+    <script>
+        const targetImage = document.getElementById('targetImage');
+        const currentFilenameInput = document.getElementById('current_filename');
+        const doctorNameInput = document.getElementById('doctor_name');
+        const ratingInput = document.getElementById('rating');
+        const commentsInput = document.getElementById('comments');
+        const diseaseNameInput = document.getElementById('disease_name');
+        const categorySelect = document.getElementById('category');
+        const submitButton = document.getElementById('submit_button');
+        const nextButton = document.getElementById('next_image_button');
+        const messageContainer = document.getElementById('message-container');
+        const backendUrl = 'http://localhost:8000';
+        let currentFilename = null;
+        let currentImageId = null; // Store the ID after submission
+
+        function fetchAndDisplayImage() {
+            console.log('fetchAndDisplayImage() called!');
+            fetch(`${backendUrl}/categorize_image/`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No images to categorize found.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('fetchAndDisplayImage() - Received data:', data);
+                    if (data && data.image_path) {
+                        currentFilename = data.image_path.split('/').pop();
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null;
+                    } else {
+                        console.log('fetchAndDisplayImage() - Data is null or missing image_path:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching first image:', error);
+                    messageContainer.textContent = 'Failed to load initial image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+
+        fetchAndDisplayImage();
+
+        submitButton.addEventListener('click', () => {
+            if (!currentFilename) {
+                alert('No image to submit.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('current_filename', currentFilename);
+            formData.append('doctor_name', doctorNameInput.value);
+            formData.append('rating', ratingInput.value);
+            formData.append('comments', commentsInput.value);
+            formData.append('disease_name', diseaseNameInput.value);
+            formData.append('category', categorySelect.value);
+
+            fetch(`${backendUrl}/categorize_image/`, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                messageContainer.textContent = data.message;
+                currentImageId = data.image_id;
+                fetchNextImage();
+                console.log('After fetchNextImage() call in submit - currentFilename:', currentFilename);
+            })
+            .catch(error => {
+                console.error('Error categorizing image:', error);
+                messageContainer.textContent = 'Failed to categorize image. Please check console.';
+            });
+
+        });
+
+        nextButton.addEventListener('click', () => {
+            console.log('nextButton clicked - currentFilename:', currentFilename);
+            if (!currentFilename) {
+                alert('No current image.');
+                return;
+            }
+            fetchNextImage();
+        });
+
+        function fetchNextImage() {
+            if (!currentFilename) {
+                console.log('fetchNextImage() - No currentFilename.');
+                return;
+            }
+            console.log('fetchNextImage() called with currentFilename:', currentFilename);
+            fetch(`${backendUrl}/categorize_image/${currentFilename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        console.log('fetchNextImage() - Response not OK:', response);
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No more images to categorize.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    console.log('fetchNextImage() - Response OK');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('fetchNextImage() - Received data:', data);
+                    if (data && data.image_path) {
+                        const newFilename = data.image_path.split('/').pop();
+                        console.log('fetchNextImage() - New filename extracted:', newFilename);
+                        currentFilename = newFilename;
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null;
+                    } else {
+                        console.log('fetchNextImage() - Data is null or missing image_path:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching next image:', error);
+                    messageContainer.textContent = 'Failed to load next image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Categorize Image</title>
+    <style>
+        body { font-family: sans-serif; }
+        #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
+        #next_image_button { margin-top: 10px; }
+        #message-container { margin-top: 20px; font-weight: bold; }
+        .backend-routes {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .backend-routes h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .backend-routes ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        .backend-routes li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="categorization-form">
+        <h1>Categorize Image</h1>
+        <img id="targetImage" src="" alt="Image to categorize">
+        <form id="categorizationForm">
+            <input type="hidden" id="current_filename" name="current_filename">
+            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required></div>
+            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required></div>
+            <div><label for="comments">Comments:</label><textarea id="comments" name="comments"></textarea></div>
+            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required></div>
+            <div><label for="category">Category:</label><select id="category" name="category"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
+            <button type="button" id="submit_button">Submit</button>
+            <button type="button" id="next_image_button">Next Image</button>
+        </form>
+        <div id="message-container"></div>
+    </div>
+    <div class="backend-routes">
+        <h2>Backend Server Routes (http://localhost:8000)</h2>
+        <ul>
+            <li><strong>GET /categorize_image/</strong>: Retrieves the first image filename from the 'images' directory.</li>
+            <li><strong>GET /categorize_image/&#123;current_displayed_filename&#125;</strong>: Retrieves the next image filename from the 'images' directory.</li>
+            <li><strong>POST /categorize_image/</strong>: Submits the categorization details, creates a database entry, and moves the image. Requires form data: <code>current_filename</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
+            <li><strong>/images/&#123;path_to_image&#125;</strong>: Serves static image files.</li>
+        </ul>
+    </div>
+
+    <script>
+        const targetImage = document.getElementById('targetImage');
+        const currentFilenameInput = document.getElementById('current_filename');
+        const doctorNameInput = document.getElementById('doctor_name');
+        const ratingInput = document.getElementById('rating');
+        const commentsInput = document.getElementById('comments');
+        const diseaseNameInput = document.getElementById('disease_name');
+        const categorySelect = document.getElementById('category');
+        const submitButton = document.getElementById('submit_button');
+        const nextButton = document.getElementById('next_image_button');
+        const messageContainer = document.getElementById('message-container');
+        const backendUrl = 'http://localhost:8000';
+        let currentFilename = null;
+        let currentImageId = null; // Store the ID after submission
+        let fetchingNextImage = false; // Flag to track if fetchNextImage is running
+
+        function fetchAndDisplayImage() {
+            console.log('fetchAndDisplayImage() called!');
+            fetch(`${backendUrl}/categorize_image/`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No images to categorize found.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('fetchAndDisplayImage() - Received data:', data);
+                    if (data && data.image_path) {
+                        currentFilename = data.image_path.split('/').pop();
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        messageContainer.textContent = '';
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null;
+                    } else {
+                        console.log('fetchAndDisplayImage() - Data is null or missing image_path:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching first image:', error);
+                    messageContainer.textContent = 'Failed to load initial image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                });
+        }
+
+        fetchAndDisplayImage();
+
+        submitButton.addEventListener('click', () => {
+            if (!currentFilename) {
+                alert('No image to submit.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('current_filename', currentFilename);
+            formData.append('doctor_name', doctorNameInput.value);
+            formData.append('rating', ratingInput.value);
+            formData.append('comments', commentsInput.value);
+            formData.append('disease_name', diseaseNameInput.value);
+            formData.append('category', categorySelect.value);
+
+            fetch(`${backendUrl}/categorize_image/`, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                messageContainer.textContent = data.message;
+                currentImageId = data.image_id;
+                fetchNextImage();
+                console.log('After fetchNextImage() call in submit - currentFilename:', currentFilename);
+            })
+            .catch(error => {
+                console.error('Error categorizing image:', error);
+                messageContainer.textContent = 'Failed to categorize image. Please check console.';
+            });
+
+        });
+
+        nextButton.addEventListener('click', () => {
+            console.log('nextButton clicked - currentFilename:', currentFilename);
+            if (!currentFilename) {
+                alert('No current image.');
+                return;
+            }
+            fetchNextImage();
+        });
+
+        function fetchNextImage() {
+            if (!currentFilename || fetchingNextImage) {
+                console.log('fetchNextImage() - No currentFilename or already fetching.');
+                return;
+            }
+            console.log('fetchNextImage() called with currentFilename:', currentFilename);
+            nextButton.disabled = true; // Disable the button
+            messageContainer.textContent = ''; // Clear any previous messages
+            fetchingNextImage = true;
+            fetch(`${backendUrl}/categorize_image/${currentFilename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        console.log('fetchNextImage() - Response not OK:', response);
+                        if (response.status === 404) {
+                            messageContainer.textContent = 'No more images to categorize.';
+                            targetImage.src = '';
+                            targetImage.alt = '';
+                            currentFilenameInput.value = '';
+                            submitButton.disabled = true;
+                            nextButton.disabled = true;
+                            fetchingNextImage = false;
+                            return null;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    console.log('fetchNextImage() - Response OK');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('fetchNextImage() - Received data:', data);
+                    fetchingNextImage = false; // Reset the flag
+                    nextButton.disabled = false; // Re-enable the button
+                    if (data && data.image_path) {
+                        const newFilename = data.image_path.split('/').pop();
+                        console.log('fetchNextImage() - New filename extracted:', newFilename);
+                        currentFilename = newFilename;
+                        currentFilenameInput.value = currentFilename;
+                        targetImage.src = `${backendUrl}/${data.image_path}`;
+                        targetImage.alt = `Image ${currentFilename}`;
+                        doctorNameInput.value = '';
+                        ratingInput.value = '';
+                        commentsInput.value = '';
+                        diseaseNameInput.value = '';
+                        categorySelect.value = 'disease';
+                        currentImageId = null;
+                    } else {
+                        console.log('fetchNextImage() - No more images received:', data);
+                        messageContainer.textContent = 'No more images to categorize.';
+                        targetImage.src = '';
+                        targetImage.alt = '';
+                        currentFilenameInput.value = '';
+                        submitButton.disabled = true;
+                        nextButton.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching next image:', error);
+                    messageContainer.textContent = 'Failed to load next image. Please check console.';
+                    targetImage.style.display = 'none';
+                    document.getElementById('categorizationForm').style.display = 'none';
+                    fetchingNextImage = false; // Reset the flag on error
+                    nextButton.disabled = false; // Re-enable on error
+                });
+        }
+    </script>
+</body>
+</html>

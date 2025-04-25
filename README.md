@@ -13,4 +13,11 @@ CREATE USER admin WITH PASSWORD 'admin';
 GRANT ALL PRIVILEGES ON DATABASE doctor_image_validation TO admin;
 \q
 
+Running the frontend server
+cd frontend
+python3 -m http.server 8080
+
+Running the Backend server
+uvicorn app.main:app --reload
+
 

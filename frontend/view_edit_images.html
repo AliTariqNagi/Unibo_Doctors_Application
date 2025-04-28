@@ -293,30 +293,30 @@
             });
             dataTable.style.display = 'table';
             // Auto-save on change
-            document.querySelectorAll('.editable').forEach(input => {
-                input.addEventListener('change', () => {
-                    const id = input.dataset.id;
-                    const field = input.dataset.field;
-                    const value = input.value;
+            // document.querySelectorAll('.editable').forEach(input => {
+            //     input.addEventListener('change', () => {
+            //         const id = input.dataset.id;
+            //         const field = input.dataset.field;
+            //         const value = input.value;
 
-                    const formData = new FormData();
-                    formData.append(field, value);
+            //         const formData = new FormData();
+            //         formData.append(field, value);
 
-                    fetch(`${backendUrl}/update_image_details/${id}`, {
-                        method: 'POST',
-                        body: formData,
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        messageContainer.textContent = `Updated ${field} for ID ${id}`;
-                        errorContainer.textContent = '';
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        errorContainer.textContent = 'Auto-save failed';
-                    });
-                });
-            });
+            //         fetch(`${backendUrl}/update_image_details/${id}`, {
+            //             method: 'POST',
+            //             body: formData,
+            //         })
+            //         .then(response => response.json())
+            //         .then(data => {
+            //             messageContainer.textContent = `Updated ${field} for ID ${id}`;
+            //             errorContainer.textContent = '';
+            //         })
+            //         .catch(err => {
+            //             console.error(err);
+            //             errorContainer.textContent = 'Auto-save failed';
+            //         });
+            //     });
+            // });
 
 
             // Attach event listeners to the edit buttons

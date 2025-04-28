@@ -1,269 +1,4 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Categorize Image Pair</title>
-    <style>
-        body { font-family: sans-serif; }
-        #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
-        img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
-        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
-        #next_image_button { margin-top: 10px; }
-        #message-container { margin-top: 20px; font-weight: bold; }
-        .backend-routes {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #eee;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-        }
-        .backend-routes h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        .backend-routes ul {
-            padding-left: 20px;
-            margin-bottom: 0;
-        }
-        .backend-routes li {
-            margin-bottom: 5px;
-        }
-        .image-pair {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .image-pair img {
-            max-width: 45%;
-            height: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .image-pair .image-title {
-            text-align: center;
-            font-size: 0.9em;
-            color: #555;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div id="categorization-form">
-        <h1>Categorize Image Pair</h1>
-        <div class="image-pair">
-            <div class="image-container">
-                <img id="targetImage" src="" alt="Original Image">
-                <p class="image-title">Original Image</p>
-            </div>
-            <div class="image-container">
-                <img id="maskImage" src="" alt="Mask Image">
-                <p class="image-title">Mask Image</p>
-            </div>
-        </div>
-        <form id="categorizationForm">
-            <input type="hidden" id="current_filename" name="current_filename">
-            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required></div>
-            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required></div>
-            <div><label for="comments">Comments (Original Image):</label><textarea id="comments" name="comments"></textarea></div>
-            <div><label for="mask_comments">Comments (Mask Image):</label><textarea id="mask_comments" name="mask_comments"></textarea></div>
-            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required></div>
-            <div><label for="category">Category:</label><select id="category" name="category"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
-            <button type="button" id="submit_button">Submit</button>
-            <button type="button" id="next_image_button">Next Pair</button>
-        </form>
-        <div id="message-container"></div>
-    </div>
-    <div class="backend-routes">
-        <h2>Backend Server Routes (http://localhost:8000)</h2>
-        <ul>
-            <li><strong>GET /categorize_image/</strong>: Retrieves the first uncategorized image.</li>
-            <li><strong>GET /categorize_image/{current_image_id}</strong>: Retrieves the next uncategorized image after the image with the given ID.</li>
-            <li><strong>POST /categorize_image/</strong>: Submits the categorization details for the current image, saves them to the database, and moves the image file. Requires form data: <code>image_id</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>mask_comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
-            <li><strong>/images/{path_to_image}</strong>: Serves static image files from the <code>images</code> directory.</li>
-        </ul>
-    </div>
-    <script>
-        const targetImage = document.getElementById('targetImage');
-        const maskImage = document.getElementById('maskImage');
-        const currentFilenameInput = document.getElementById('current_filename');
-        const doctorNameInput = document.getElementById('doctor_name');
-        const ratingInput = document.getElementById('rating');
-        const commentsInput = document.getElementById('comments');
-        const maskCommentsInput = document.getElementById('mask_comments');
-        const diseaseNameInput = document.getElementById('disease_name');
-        const categorySelect = document.getElementById('category');
-        const submitButton = document.getElementById('submit_button');  // Correct ID
-        const nextButton = document.getElementById('next_image_button');
-        const messageContainer = document.getElementById('message-container');
-        const backendUrl = 'http://localhost:8000';  // Define the backend URL
-        let currentFilename = null;
-        let fetchingNextImage = false;
-
-        function fetchAndDisplayImage() {
-            console.log('fetchAndDisplayImage() called!');
-            fetch(`${backendUrl}/categorize_image/`)
-                .then(response => {
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            messageContainer.textContent = 'No image pairs to categorize found.';
-                            targetImage.src = '';
-                            targetImage.alt = '';
-                            maskImage.src = '';
-                            maskImage.alt = '';
-                            currentFilenameInput.value = '';
-                            submitButton.disabled = true;
-                            nextButton.disabled = true;
-                            return null;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('fetchAndDisplayImage() - Received data:', data);
-                    if (data && data.image_path && data.mask_path) {
-                        currentFilename = data.image_path.split('/').pop().replace('_mask', '');
-                        currentFilenameInput.value = currentFilename;
-                        targetImage.src = `${backendUrl}/${data.image_path}`;
-                        targetImage.alt = `Original Image ${currentFilename}`;
-                        maskImage.src = `${backendUrl}/${data.mask_path}`;
-                        maskImage.alt = `Mask Image ${currentFilename}`;
-                        messageContainer.textContent = '';
-                        doctorNameInput.value = '';
-                        ratingInput.value = '';
-                        commentsInput.value = '';
-                        maskCommentsInput.value = '';
-                        diseaseNameInput.value = '';
-                        categorySelect.value = 'disease';
-                    } else {
-                        console.log('fetchAndDisplayImage() - Data missing image paths:', data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching first image pair:', error);
-                    messageContainer.textContent = 'Failed to load initial image pair. Please check console.';
-                    targetImage.style.display = 'none';
-                    maskImage.style.display = 'none';
-                    document.getElementById('categorizationForm').style.display = 'none';
-                });
-        }
-
-        fetchAndDisplayImage();
-
-        submitButton.addEventListener('click', () => { // Make sure the event listener is attached to the correct element
-            if (!currentFilename) {
-                alert('No image pair to submit.');
-                return;
-            }
-            const formData = new FormData();
-            formData.append('current_filename', currentFilename);
-            formData.append('doctor_name', doctorNameInput.value);
-            formData.append('rating', ratingInput.value);
-            formData.append('comments', commentsInput.value);
-            formData.append('mask_comments', maskCommentsInput.value);
-            formData.append('disease_name', diseaseNameInput.value);
-            formData.append('category', categorySelect.value);
-            console.log("Submitting data:", [...formData.entries()]);
-            fetch(`${backendUrl}/categorize_image/`, {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => {
-                console.log("Response from server:", response);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Data from server:", data);
-                messageContainer.textContent = data.message;
-                fetchNextImage();
-            })
-            .catch(error => {
-                console.error('Error categorizing image pair:', error);
-                messageContainer.textContent = 'Failed to categorize image pair. Please check console.';
-            });
-        });
-
-        nextButton.addEventListener('click', () => {
-            console.log('nextButton clicked - currentFilename:', currentFilename);
-            if (!currentFilename) {
-                alert('No current image pair.');
-                return;
-            }
-            if (fetchingNextImage) {
-                console.log('Already fetching next image, ignoring click.');
-                return;
-            }
-            fetchingNextImage = true;
-            fetchNextImage();
-        });
-
-        function fetchNextImage() {
-            if (fetchingNextImage) {
-                console.log('fetchNextImage() called while already fetching...');
-                return;
-            }
-            fetchingNextImage = true;
-            console.log('fetchNextImage() - currentFilename:', currentFilename);
-            fetch(`${backendUrl}/categorize_image/${currentFilename}`)
-                .then(response => {
-                    if (!response.ok) {
-                         if (response.status === 404) {
-                            messageContainer.textContent = 'No more image pairs to categorize.';
-                            targetImage.src = '';
-                            targetImage.alt = '';
-                            maskImage.src = '';
-                            maskImage.alt = '';
-                            currentFilenameInput.value = '';
-                            submitButton.disabled = true;
-                            nextButton.disabled = true;
-                            return null;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('fetchNextImage() - Received data:', data);
-                    if (data && data.image_path && data.mask_path) {
-                        currentFilename = data.image_path.split('/').pop().replace('_mask', '');
-                        currentFilenameInput.value = currentFilename;
-                        targetImage.src = `${backendUrl}/${data.image_path}`;
-                        targetImage.alt = `Original Image ${currentFilename}`;
-                        maskImage.src = `${backendUrl}/${data.mask_path}`;
-                        maskImage.alt = `Mask Image ${currentFilename}`;
-                        messageContainer.textContent = '';
-                        doctorNameInput.value = '';
-                        ratingInput.value = '';
-                        commentsInput.value = '';
-                        maskCommentsInput.value = '';
-                        diseaseNameInput.value = '';
-                        categorySelect.value = 'disease';
-                    } else {
-                         console.log('fetchNextImage() - Data missing image paths:', data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching next image pair:', error);
-                    messageContainer.textContent = 'Failed to load next image pair. Please check console.';
-                    targetImage.style.display = 'none';
-                    maskImage.style.display = 'none';
-                    document.getElementById('categorizationForm').style.display = 'none';
-                })
-                .finally(() => {
-                    fetchingNextImage = false;
-                    console.log('fetchNextImage() - finally: fetchingNextImage set to false');
-                });
-            }
-    </script>
-
-
-
-    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -469,7 +204,12 @@
     </table>
 
     <a href="/" class="home-button">Home</a>
-
+    <div id="confirmationModal" style="display: none; position: fixed; top: 30%; left: 40%; background: white; padding: 20px; border: 1px solid #ccc; z-index: 999;">
+        <p>Are you sure you want to save changes?</p>
+        <button id="confirmYes">Yes</button>
+        <button id="confirmNo">No</button>
+    </div>
+    
     <script>
         const selectedDiseaseSelect = document.getElementById('selectedDisease');
         const viewImagesButton = document.getElementById('viewImagesButton');
@@ -554,20 +294,90 @@
                     <td>${item.id}</td>
                     <td>${item.image_path}</td>
                     <td>${item.mask_path}</td>
-                    <td data-field="doctor_name" data-id="${item.id}">${item.doctor_name}</td>
-                    <td data-field="rating" data-id="${item.id}">${item.rating}</td>
-                    <td data-field="comments" data-id="${item.id}">${item.comments}</td>
-                    <td data-field="mask_comments" data-id="${item.id}">${item.mask_comments}</td>
-                    <td data-field="disease_name" data-id="${item.id}">${item.disease_name}</td>
-                    <td data-field="category" data-id="${item.id}">${item.category}</td>
+                    <td><input type="text" value="${item.doctor_name || ''}" class="editable" data-field="doctor_name" data-id="${item.id}"></td>
+                    <td><input type="number" value="${item.rating || ''}" class="editable" data-field="rating" data-id="${item.id}"></td>
+                    <td><input type="text" value="${item.comments || ''}" class="editable" data-field="comments" data-id="${item.id}"></td>
+                    <td><input type="text" value="${item.mask_comments || ''}" class="editable" data-field="mask_comments" data-id="${item.id}"></td>
+                    <td><input type="text" value="${item.disease_name || ''}" class="editable" data-field="disease_name" data-id="${item.id}"></td>
+                    <td>
+                        <select class="editable" data-field="category" data-id="${item.id}">
+                            <option value="disease" ${item.category === 'disease' ? 'selected' : ''}>Disease</option>
+                            <option value="non-disease" ${item.category === 'non-disease' ? 'selected' : ''}>Non-Disease</option>
+                        </select>
+                    </td>
                     <td>${item.created_at}</td>
-                    <td><button class="edit-button" data-id="${item.id}">Edit</button></td>
+                    <td><button class="save-button" data-id="${item.id}">💾</button></td>
                 `;
+
                 dataTableBody.appendChild(row);
             });
             dataTable.style.display = 'table';
+            // Auto-save on change
+            document.querySelectorAll('.editable').forEach(input => {
+                input.addEventListener('change', () => {
+                    const id = input.dataset.id;
+                    const field = input.dataset.field;
+                    const value = input.value;
 
-            const editButtons = document.querySelectorAll('.edit-button');
+                    const formData = new FormData();
+                    formData.append(field, value);
+
+                    fetch(`${backendUrl}/update_image_details/${id}`, {
+                        method: 'POST',
+                        body: formData,
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        messageContainer.textContent = `Updated ${field} for ID ${id}`;
+                        errorContainer.textContent = '';
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        errorContainer.textContent = 'Auto-save failed';
+                    });
+                });
+            });
+
+
+            const saveButtons = document.querySelectorAll('.save-button');
+            saveButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const id = button.dataset.id;
+
+                    // Show confirmation modal
+                    const modal = document.getElementById('confirmationModal');
+                    modal.style.display = 'block';
+
+                    document.getElementById('confirmYes').onclick = () => {
+                        modal.style.display = 'none';
+
+                        const updatedFields = {};
+                        document.querySelectorAll(`.editable[data-id="${id}"]`).forEach(input => {
+                            updatedFields[input.dataset.field] = input.value;
+                        });
+
+                        const formData = new FormData();
+                        for (const key in updatedFields) {
+                            formData.append(key, updatedFields[key]);
+                        }
+
+                        fetch(`${backendUrl}/update_image_details/${id}`, {
+                            method: 'POST',
+                            body: formData,
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            messageContainer.textContent = 'Details saved!';
+                            fetchAndDisplayImages(selectedDisease);
+                        });
+                    };
+
+                    document.getElementById('confirmNo').onclick = () => {
+                        modal.style.display = 'none';
+                    };
+                });
+            });
+
             editButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const id = button.dataset.id;
@@ -710,9 +520,28 @@
                 console.error('Error fetching disease names:', error);
                 messageContainer.textContent = 'Failed to load diseases. Please check the console.';
             });
-    </script>
-</body>
-</html>
+            function bindLivePreview() {
+                [doctorNameInput, ratingInput, commentsInput, maskCommentsInput, diseaseNameInput, categorySelect].forEach(input => {
+                    input.addEventListener('input', () => {
+                        const id = parseInt(imageIdInput.value);
+                        const index = images.findIndex(img => img.id === id);
+                        if (index !== -1) {
+                            images[index] = {
+                                ...images[index],
+                                doctor_name: doctorNameInput.value,
+                                rating: ratingInput.value,
+                                comments: commentsInput.value,
+                                mask_comments: maskCommentsInput.value,
+                                disease_name: diseaseNameInput.value,
+                                category: categorySelect.value
+                            };
+                            updateDataTable(images);
+                        }
+                    });
+                });
+            }
+            bindLivePreview(); // Call this once form elements are initialized
 
+    </script>
 </body>
 </html>

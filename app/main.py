@@ -382,6 +382,93 @@ async def submit_categorization(
         print(f"Error moving files: {e}")
         raise HTTPException(status_code=500, detail="Failed to move images")
 
+@app.get("/disease_images/{disease_name}", response_model=List[DoctorImageValidationResponse])
+async def get_disease_images(disease_name: str, db: Session = Depends(get_db)):
+    """
+    Retrieves images for a specific disease.  This will return both original
+    and mask images, and all the details stored in the database.
+    """
+    # Query the database for entries matching the disease_name
+    images = db.query(DoctorImageValidation).filter(DoctorImageValidation.disease_name == disease_name).all()
+    return images  # Return the raw database objects, Pydantic will format them
+
+@app.post("/update_image_details/{image_id}")
+async def update_image_details(
+    image_id: int,
+    doctor_name: str = Form(...),
+    rating: int = Form(...),
+    comments: Optional[str] = Form(None),
+    mask_comments: Optional[str] = Form(None),
+    disease_name: str = Form(...),
+    category: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates the details of an image in the database and moves the image files
+    if the category has changed.
+    """
+    db_image = db.query(DoctorImageValidation).filter(DoctorImageValidation.id == image_id).first()
+    if not db_image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    old_category = db_image.category  # Store the old category
+    old_image_path = db_image.image_path
+    old_mask_path = db_image.mask_path
+
+    # Update the database record
+    db_image.doctor_name = doctor_name
+    db_image.rating = rating
+    db_image.comments = comments
+    db_image.mask_comments = mask_comments
+    db_image.disease_name = disease_name
+    db_image.category = category
+    db.commit()  # Commit the changes *before* moving files
+
+    # Move files if the category has changed
+    if old_category != category:
+        try:
+            # Define source and destination directories
+            source_original_path = os.path.join(old_image_path)
+            source_mask_path = os.path.join(old_mask_path)
+            destination_dir = os.path.join("images", category)  # Correct destination
+            os.makedirs(destination_dir, exist_ok=True)
+            destination_original_path = os.path.join(destination_dir, os.path.basename(old_image_path))
+            destination_mask_path = os.path.join(destination_dir, os.path.basename(old_mask_path))
+
+            def move_file_with_collision_handling(source, destination):
+                if os.path.exists(destination):
+                    name, ext = os.path.splitext(os.path.basename(source))
+                    counter = 1
+                    while True:
+                        new_filename = f"{name}_{counter}{ext}"
+                        new_destination = os.path.join(os.path.dirname(destination), new_filename)
+                        if not os.path.exists(new_destination):
+                            destination = new_destination
+                            return destination, os.path.basename(new_filename)
+                        counter += 1
+                return destination, os.path.basename(source)
+
+            new_original_path, new_original_filename = move_file_with_collision_handling(source_original_path, destination_original_path)
+            new_mask_path, new_mask_filename = move_file_with_collision_handling(source_mask_path, destination_mask_path)
+           
+            os.rename(source_original_path, new_original_path)
+            os.rename(source_mask_path, new_mask_path)
+
+            # Update the database with the new paths
+            db_image.image_path = os.path.join("images", category, new_original_filename)
+            db_image.mask_path = os.path.join("images", category, new_mask_filename)
+            db.commit()
+
+        except FileNotFoundError as e:
+            db.rollback()
+            raise HTTPException(status_code=404, detail=f"Source file not found: {e.filename}")
+        except Exception as e:
+            db.rollback()
+            logging.error(f"Error moving files: {e}")
+            raise HTTPException(status_code=500, detail="Failed to move images")
+
+    db.refresh(db_image)
+    return {"message": "Image details updated successfully", "image_id": image_id}
 
 
 

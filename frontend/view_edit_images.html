@@ -204,12 +204,7 @@
     </table>
 
     <a href="/" class="home-button">Home</a>
-    <div id="confirmationModal" style="display: none; position: fixed; top: 30%; left: 40%; background: white; padding: 20px; border: 1px solid #ccc; z-index: 999;">
-        <p>Are you sure you want to save changes?</p>
-        <button id="confirmYes">Yes</button>
-        <button id="confirmNo">No</button>
-    </div>
-    
+
     <script>
         const selectedDiseaseSelect = document.getElementById('selectedDisease');
         const viewImagesButton = document.getElementById('viewImagesButton');
@@ -306,88 +301,48 @@
                         </select>
                     </td>
                     <td>${item.created_at}</td>
-                    <td><button class="save-button" data-id="${item.id}">💾</button></td>
+                    <td><button class="save-button" data-id="${item.id}">Save</button></td>
                 `;
-
                 dataTableBody.appendChild(row);
             });
             dataTable.style.display = 'table';
-            // Auto-save on change
-            // document.querySelectorAll('.editable').forEach(input => {
-            //     input.addEventListener('change', () => {
-            //         const id = input.dataset.id;
-            //         const field = input.dataset.field;
-            //         const value = input.value;
-
-            //         const formData = new FormData();
-            //         formData.append(field, value);
-
-            //         fetch(`${backendUrl}/update_image_details/${id}`, {
-            //             method: 'POST',
-            //             body: formData,
-            //         })
-            //         .then(response => response.json())
-            //         .then(data => {
-            //             messageContainer.textContent = `Updated ${field} for ID ${id}`;
-            //             errorContainer.textContent = '';
-            //         })
-            //         .catch(err => {
-            //             console.error(err);
-            //             errorContainer.textContent = 'Auto-save failed';
-            //         });
-            //     });
-            // });
-
 
             const saveButtons = document.querySelectorAll('.save-button');
             saveButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const id = button.dataset.id;
+                    const updatedFields = {};
+                    document.querySelectorAll(`.editable[data-id="${id}"]`).forEach(input => {
+                        updatedFields[input.dataset.field] = input.value;
+                    });
 
-                    // Show confirmation modal
-                    const modal = document.getElementById('confirmationModal');
-                    modal.style.display = 'block';
-
-                    document.getElementById('confirmYes').onclick = () => {
-                        modal.style.display = 'none';
-
-                        const updatedFields = {};
-                        document.querySelectorAll(`.editable[data-id="${id}"]`).forEach(input => {
-                            updatedFields[input.dataset.field] = input.value;
-                        });
-
-                        const formData = new FormData();
-                        for (const key in updatedFields) {
-                            formData.append(key, updatedFields[key]);
-                        }
-
-                        fetch(`${backendUrl}/update_image_details/${id}`, {
-                            method: 'POST',
-                            body: formData,
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            messageContainer.textContent = 'Details saved!';
-                            fetchAndDisplayImages(selectedDisease);
-                        });
-                    };
-
-                    document.getElementById('confirmNo').onclick = () => {
-                        modal.style.display = 'none';
-                    };
-                });
-            });
-
-            editButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const id = button.dataset.id;
-                    editingId = id;
-                    const imageToEdit = images.find(img => img.id === parseInt(id));
-                    if (imageToEdit) {
-                        populateForm(imageToEdit);
-                        imageContainer.style.display = 'flex';
-                        imageDetailsForm.style.display = 'flex';
+                    const formData = new FormData();
+                    for (const key in updatedFields) {
+                        formData.append(key, updatedFields[key]);
                     }
+
+                    fetch(`${backendUrl}/update_image_details/${id}`, {
+                        method: 'POST',
+                        body: formData,
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(err => {
+                                    throw new Error(err.detail || 'Failed to update image details');
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            messageContainer.textContent = data.message;
+                            errorContainer.textContent = '';
+                            fetchAndDisplayImages(selectedDisease);
+                        })
+                        .catch(error => {
+                            console.error('Error updating image details:', error);
+                            errorContainer.textContent = error.message;
+                            messageContainer.textContent = '';
+                        });
                 });
             });
         }
@@ -460,6 +415,7 @@
             const category = formData.get('category');
 
 
+
             fetch(`${backendUrl}/update_image_details/${id}`, {
                 method: 'POST',
                 body: formData,
@@ -520,27 +476,6 @@
                 console.error('Error fetching disease names:', error);
                 messageContainer.textContent = 'Failed to load diseases. Please check the console.';
             });
-            function bindLivePreview() {
-                [doctorNameInput, ratingInput, commentsInput, maskCommentsInput, diseaseNameInput, categorySelect].forEach(input => {
-                    input.addEventListener('input', () => {
-                        const id = parseInt(imageIdInput.value);
-                        const index = images.findIndex(img => img.id === id);
-                        if (index !== -1) {
-                            images[index] = {
-                                ...images[index],
-                                doctor_name: doctorNameInput.value,
-                                rating: ratingInput.value,
-                                comments: commentsInput.value,
-                                mask_comments: maskCommentsInput.value,
-                                disease_name: diseaseNameInput.value,
-                                category: categorySelect.value
-                            };
-                            updateDataTable(images);
-                        }
-                    });
-                });
-            }
-            bindLivePreview(); // Call this once form elements are initialized
 
     </script>
 </body>

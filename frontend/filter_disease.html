@@ -7,8 +7,19 @@
         #filter-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 20px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         select, input[type="text"], button { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
-        #image-container { text-align: center; margin-bottom: 20px; }
-        #image-container img { max-width: 80%; height: auto; display: block; margin: 0 auto 10px auto; }
+        #image-container {
+            text-align: center;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        #image-container img {
+            max-width: 40%;
+            height: auto;
+            display: block;
+            margin: 0 auto 10px auto;
+        }
         #entry-details { border: 1px solid #eee; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
         #entry-details h3 { margin-top: 0; }
         #navigation-buttons button { width: auto; margin-right: 10px; padding: 10px 15px; }
@@ -30,7 +41,14 @@
     </div>
 
     <div id="image-container">
-        <img id="filteredImage" src="" alt="Filtered Image" style="display: none;">
+        <div style="text-align: center;">
+            <img id="filteredImage" src="" alt="Original Image" style="display: none;">
+            <p>Original Image</p>
+        </div>
+        <div style="text-align: center;">
+            <img id="filteredMaskImage" src="" alt="Mask Image" style="display: none;">
+            <p>Mask Image</p>
+        </div>
     </div>
 
     <div id="entry-details" style="display: none;">
@@ -38,6 +56,7 @@
         <p><strong>Doctor's Name:</strong> <span id="doctorName"></span></p>
         <p><strong>Rating:</strong> <span id="rating"></span></p>
         <p><strong>Comments:</strong> <span id="comments"></span></p>
+        <p><strong>Mask Comments:</strong> <span id="maskComments"></span></p>
         <p><strong>Disease Name:</strong> <span id="entryDiseaseName"></span></p>
         <p><strong>Category:</strong> <span id="entryCategory"></span></p>
     </div>
@@ -55,6 +74,7 @@
         const filterButton = document.getElementById('filterButton');
         const imageContainer = document.getElementById('image-container');
         const filteredImage = document.getElementById('filteredImage');
+        const filteredMaskImage = document.getElementById('filteredMaskImage');
         const entryDetails = document.getElementById('entry-details');
         const prevButton = document.getElementById('prevButton');
         const nextButton = document.getElementById('nextButton');
@@ -89,12 +109,13 @@
                 currentIndex = 0;
                 if (filteredEntries.length > 0) {
                     displayEntry(filteredEntries[currentIndex]);
-                    imageContainer.style.display = 'block';
+                    imageContainer.style.display = 'flex';
                     entryDetails.style.display = 'block';
                     document.getElementById('navigation-buttons').style.display = 'block';
                     messageContainer.textContent = '';
                 } else {
                     filteredImage.style.display = 'none';
+                    filteredMaskImage.style.display = 'none';
                     entryDetails.style.display = 'none';
                     document.getElementById('navigation-buttons').style.display = 'none';
                     messageContainer.textContent = 'No entries found for the selected criteria.';
@@ -109,13 +130,17 @@
         }
 
         function displayEntry(entry) {
-            filteredImage.src = `${backendUrl}/${entry.image_path}`;
-            filteredImage.style.display = 'block';
-            document.getElementById('doctorName').textContent = entry.doctor_name;
-            document.getElementById('rating').textContent = entry.rating;
-            document.getElementById('comments').textContent = entry.comments || '';
-            document.getElementById('entryDiseaseName').textContent = entry.disease_name;
-            document.getElementById('entryCategory').textContent = entry.category;
+            filteredImage.src = entry.image_path ? `${backendUrl}/${entry.image_path}` : '';
+            filteredImage.style.display = entry.image_path ? 'block' : 'none';
+            filteredMaskImage.src = entry.mask_path ? `${backendUrl}/${entry.mask_path}` : '';
+            filteredMaskImage.style.display = entry.mask_path ? 'block' : 'none';
+
+            document.getElementById('doctorName').textContent = entry.doctor_name || 'N/A';
+            document.getElementById('rating').textContent = entry.rating || 'N/A';
+            document.getElementById('comments').textContent = entry.comments || 'N/A';
+            document.getElementById('maskComments').textContent = entry.mask_comments || 'N/A';
+            document.getElementById('entryDiseaseName').textContent = entry.disease_name || 'N/A';
+            document.getElementById('entryCategory').textContent = entry.category || 'N/A';
         }
 
         filterButton.addEventListener('click', fetchFilteredData);

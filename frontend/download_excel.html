@@ -17,9 +17,11 @@
             <tr>
                 <th>ID</th>
                 <th>Image Path</th>
+                <th>Mask Path</th> 
                 <th>Doctor's Name</th>
                 <th>Rating</th>
                 <th>Comments</th>
+                <th>Mask Comments</th> 
                 <th>Disease Name</th>
                 <th>Category</th>
             </tr>
@@ -44,7 +46,7 @@
                 populateTable(data);
             } catch (error) {
                 console.error('Error fetching categorizations:', error);
-                tableBody.innerHTML = '<tr><td colspan="7">Failed to load data. Please check the console.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="9">Failed to load data. Please check the console.</td></tr>';
             }
         }
 
@@ -54,9 +56,11 @@
                 const row = tableBody.insertRow();
                 row.insertCell().textContent = entry.id;
                 row.insertCell().textContent = entry.image_path;
+                row.insertCell().textContent = entry.mask_path || ''; 
                 row.insertCell().textContent = entry.doctor_name;
                 row.insertCell().textContent = entry.rating;
                 row.insertCell().textContent = entry.comments || '';
+                row.insertCell().textContent = entry.mask_comments || ''; 
                 row.insertCell().textContent = entry.disease_name;
                 row.insertCell().textContent = entry.category;
             });

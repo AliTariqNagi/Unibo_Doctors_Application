@@ -46,11 +46,11 @@ app.add_middleware(
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # --- Serve skin disease images from the external hard drive at a NEW prefix ---
-skin_disease_data_path = "/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
-app.mount("/skin_disease_data", StaticFiles(directory=skin_disease_data_path), name="skin_disease_data")
+#skin_disease_data_path = "/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
+#app.mount("/skin_disease_data", StaticFiles(directory=skin_disease_data_path), name="skin_disease_data")
 
-skin_disease_crop_data_path = "/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
-app.mount("/skin_disease_data2", StaticFiles(directory=skin_disease_crop_data_path), name="skin_disease_data2")
+#skin_disease_crop_data_path = "/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
+#app.mount("/skin_disease_data2", StaticFiles(directory=skin_disease_crop_data_path), name="skin_disease_data2")
 
 
 def find_image_pair(directory="images") -> List[Tuple[str, str]]:

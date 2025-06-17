@@ -23,6 +23,12 @@ uvicorn app.main:app --reload
 root@UniboDoctorsApp:~/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/frontend# pm2 start "python3 -m http.server 8080" --name frontend
 
 
+pm2 delete frontend  # optional, if already running
+pm2 start "python3 -m http.server 80" --name frontend
+
+pm2 save
+pm2 startup
+
 # Running the Project for the first time
 Move images from the Unibo_Doctors_Application/images/disease and Unibo_Doctors_Application/images/non-disease folders to Unibo_Doctors_Application/images
 

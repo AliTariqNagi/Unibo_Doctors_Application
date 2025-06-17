@@ -46,3 +46,8 @@ From the browser please enter the address
 http://localhost:8080/main.html  
 Username: admin  
 Password: password  
+
+
+# Download the Project Folder to local computer
+scp -r root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main' .
+

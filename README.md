@@ -47,7 +47,10 @@ http://localhost:8080/main.html
 Username: admin  
 Password: password  
 
+# Upload Images to the Server
+$ scp ./images/* root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/images'
 
 # Download the Project Folder to local computer
-scp -r root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main' .
+tar -czvf my_selected_project.tar.gz app frontend
+$ scp root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/my_selected_project.tar.gz' .
 

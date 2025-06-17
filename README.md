@@ -31,6 +31,8 @@ pm2 startup
 
 http://192.168.15.7:8000
 
+sudo pm2 start "uvicorn app.main:app --host 0.0.0.0 --port 80 --reload" --name backend-80
+
 # Running the Project for the first time
 Move images from the Unibo_Doctors_Application/images/disease and Unibo_Doctors_Application/images/non-disease folders to Unibo_Doctors_Application/images
 

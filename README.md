@@ -29,6 +29,8 @@ pm2 start "python3 -m http.server 80" --name frontend
 pm2 save
 pm2 startup
 
+http://192.168.15.7:8000
+
 # Running the Project for the first time
 Move images from the Unibo_Doctors_Application/images/disease and Unibo_Doctors_Application/images/non-disease folders to Unibo_Doctors_Application/images
 

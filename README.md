@@ -48,7 +48,16 @@ Username: admin
 Password: password  
 
 # Upload Images to the Server
-$ scp ./images/* root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/images'
+The command to upload images for the module 1 (Categorize Images) is:
+scp ./images/* root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/images'
+
+Where ./images is the local folder which contain all the image files
+Each images should have four formats:
+image_name.jpg,
+image_name_mask.jpg,
+image_name_crop.jpg,
+image_name_crop_mask.jpg
+
 
 # Download the Project Folder to local computer
 tar -czvf my_selected_project.tar.gz app frontend

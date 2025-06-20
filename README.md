@@ -43,7 +43,7 @@ Move images from the Unibo_Doctors_Application/images/disease and Unibo_Doctors_
 
 # Application
 From the browser please enter the address
-http://localhost:8080/main.html  
+https://medicalimages.apice.unibo.it/frontend/main.html  
 Username: admin  
 Password: password  
 

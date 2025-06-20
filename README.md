@@ -64,9 +64,9 @@ tar -czvf my_selected_project.tar.gz app frontend
 $ scp root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/my_selected_project.tar.gz' .
 
 # Downloading files from the project 
-# Project
+## Project
 scp -r root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main' .
-# Files
+## Files
 scp -r root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/app/*.py' .
 
 # Uploading files to the directory

@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor
-from app.schemas import DoctorImageValidationResponse, DoctorSchema  # Import DoctorSchema
+from app.schemas import DoctorImageValidationResponse, DoctorSchema, CropImageValidationResponse, CropImageValidationRequest  # Import DoctorSchema
 import os
 import shutil
 import pandas as pd
@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Depends, Form, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from app.models import SkinDiseaseImage, SessionLocal, engine, Base
+from app.models import SkinDiseaseImage, SessionLocal, engine, Base, CropImageValidation
 from app.schemas import SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse # Create a new schema
 from typing import Optional, List
 import re
@@ -24,7 +24,8 @@ from fastapi.responses import FileResponse
 from datetime import datetime
 # No need to recreate tables here, model.py does it
 # Base.metadata.create_all(bind=engine)
-
+import random
+from datetime import datetime, timezone # <--- Change UTC to timezone
 
 def get_db():
     db = SessionLocal()
@@ -35,6 +36,20 @@ def get_db():
 
 app = FastAPI()
 
+origins = [
+    "https://192.168.15.7:8000", # Your backend itself (often good to include)
+    "http://localhost:8080",    # If you're serving HTML locally via http.server
+    "http://127.0.0.1:8080",    # Alternative localhost
+    "file://",                  # If opening HTML directly from your computer (common)
+    "null",                     # Also if opening HTML directly from your computer (common fallback)
+    "http://192.168.15.7:8080", # If your server serves the frontend HTML on this port
+    "https://192.168.15.7",     # If your server serves frontend HTML on standard HTTPS port
+    "*",                         # FOR DEVELOPMENT ONLY: Allows all origins. Use with CAUTION.
+    "https://medicalimages.apice.unibo.it"                            # If using '*', you generally shouldn't allow credentials.
+                                # It's best to be specific.
+]
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins (for development, specify origins in production)
@@ -44,13 +59,28 @@ app.add_middleware(
 )
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
+# Mount your static files at a path, e.g., /static-frontend
+# Make sure the directory path is correct on your VM
+# IMPORTANT: Ensure your 'main.html' and other frontend files are actually
+# inside a 'frontend' sub-directory within this specified path.
+app.mount("/frontend", StaticFiles(directory="/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/frontend"), name="static_frontend")
+
+# Optional: Redirect root to your main HTML file
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/static-frontend/main.html")
+
+# (Your /get_skin_disease_data/ endpoint would remain as is)
+
+
+
 
 # --- Serve skin disease images from the external hard drive at a NEW prefix ---
-#skin_disease_data_path = "/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
-#app.mount("/skin_disease_data", StaticFiles(directory=skin_disease_data_path), name="skin_disease_data")
+skin_disease_data_path = "/root/test_data" #"/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
+app.mount("/skin_disease_data", StaticFiles(directory=skin_disease_data_path), name="skin_disease_data")
 
-#skin_disease_crop_data_path = "/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
-#app.mount("/skin_disease_data2", StaticFiles(directory=skin_disease_crop_data_path), name="skin_disease_data2")
+skin_disease_crop_data_path = "/root/test_data" #"/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
+app.mount("/skin_disease_data2", StaticFiles(directory=skin_disease_crop_data_path), name="skin_disease_data2")
 
 
 def find_image_pair(directory="images") -> List[Tuple[str, str]]:
@@ -442,7 +472,6 @@ async def get_disease_names(db: Session = Depends(get_db)):
     disease_names = db.query(DoctorImageValidation.disease_name).distinct().all()
     return [row[0] for row in disease_names]
 
-
 @app.post("/register_doctor/")
 async def register_doctor(
     doctorName: str = Form(...),
@@ -452,16 +481,12 @@ async def register_doctor(
     email: Optional[str] = Form(None),
     specialization: Optional[str] = Form(None),
     registrationId: str = Form(...),
+    yearsOfExperience: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
-    """
-    Registers a new doctor in the database.
-    """
-    # Check if the registration ID already exists
     if db.query(Doctor).filter(Doctor.registration_id == registrationId).first():
         raise HTTPException(status_code=400, detail="Registration ID already exists")
 
-    # Create a new Doctor instance
     db_doctor = Doctor(
         doctor_name=doctorName,
         hospital=hospital,
@@ -470,15 +495,14 @@ async def register_doctor(
         email=email,
         specialization=specialization,
         registration_id=registrationId,
+        years_of_experience=yearsOfExperience,
     )
 
-    # Add the doctor to the database
     db.add(db_doctor)
     db.commit()
-    db.refresh(db_doctor)  # Get the newly created doctor instance with the ID
+    db.refresh(db_doctor)
 
     return {"message": "Doctor registered successfully", "doctor_id": db_doctor.id}
-
 
 
 @app.get("/doctors/", response_model=List[DoctorSchema])
@@ -571,16 +595,6 @@ def delete_table_route(table_name: str, db: Session = Depends(get_db)):
             detail=f"An error occurred while deleting the table: {str(e)}",
         )
 
-#The image_root parameter in populate_database_from_filesystem is now required.
-#The /populate_database/ endpoint now expects a query parameter image_path which should 
-#contain the absolute path to your directory. You would call this endpoint like: 
-#http://localhost:8000/populate_database/?image_path=/path/to/your/external/skin_disease_data.
-
-
-# import os
-# import re
-# from sqlalchemy.orm import Session
-# from models import SkinDiseaseImage  # Adjust import if needed
 
 def populate_database_from_filesystem(db: Session, image_root: str):
     """
@@ -690,50 +704,6 @@ async def get_skin_disease_image(image_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Image not found")
     return image
 
-# @app.post("/skin_disease_images/{image_id}")
-# async def update_skin_disease_image(image_id: int, item: SkinDiseaseImageResponse, db: Session = Depends(get_db)):
-#     db_item = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.id == image_id).first()
-#     if not db_item:
-#         raise HTTPException(status_code=404, detail="Image not found")
-#     for key, value in item.dict(exclude_unset=True).items():
-#         setattr(db_item, key, value)
-#     db.commit()
-#     db.refresh(db_item)
-#     return {"message": f"Image with ID {image_id} updated."}
-
-# @app.post("/skin_disease_images/{image_id}")
-# async def update_skin_disease_image(image_id: int, item: dict, db: Session = Depends(get_db)):
-#     db_item = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.id == image_id).first()
-#     if not db_item:
-#         raise HTTPException(status_code=404, detail="Image not found")
-#     if "fitzpatrick_scale" in item:
-#         db_item.fitzpatrick_scale = item["fitzpatrick_scale"]
-#         db.commit()
-#         db.refresh(db_item)
-#         return {"message": f"Fitzpatrick scale for image ID {image_id} updated."}
-#     else:
-#         raise HTTPException(status_code=400, detail="Missing 'fitzpatrick_scale' in request.")
-
-# @app.post("/skin_disease_image/update/{image_name}", response_model=SkinDiseaseImageResponse)
-# def update_skin_disease_image_post(
-#     image_name: str,
-#     payload: DoctorImageValidationUpdateRequest,
-#     db: Session = Depends(get_db)
-# ):
-#     db_record = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.image_name == image_name).first()
-#     if not db_record:
-#         raise HTTPException(status_code=404, detail="Image record not found")
-
-#     update_data = payload.dict(exclude_unset=True)
-
-#     for key, value in update_data.items():
-#         setattr(db_record, key, value)
-
-#     db.commit()
-#     db.refresh(db_record)
-
-#     return db_record
-
 
 # --- Routes for skin tone classification ---
 @app.get("/patient_images/{persona_digits}", response_model=List[SkinDiseaseImageResponse])
@@ -778,7 +748,7 @@ async def download_skin_disease_excel(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
 
     # Use only defined column names
-    column_names = [column.name for column in DoctorImageValidation.__table__.columns]
+    column_names = [column.name for column in SkinDiseaseImage.__table__.columns]
     data = [{col: getattr(image, col) for col in column_names} for image in images]
 
     df = pd.DataFrame(data)
@@ -1008,7 +978,7 @@ import shutil
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models import DoctorImageValidation
-from app.schemas import DoctorImageValidationRequest, DoctorImageValidationResponse
+from app.schemas import DoctorImageValidationRequest, DoctorImageValidationResponse, CropImageValidationResponse, CropImageValidationRequest
 #from database import get_db
 
 router = APIRouter()
@@ -1016,6 +986,8 @@ router = APIRouter()
 BASE_IMAGE_DIR = "images"
 DISEASE_DIR = os.path.join(BASE_IMAGE_DIR, "disease")
 NON_DISEASE_DIR = os.path.join(BASE_IMAGE_DIR, "non-disease")
+
+
 
 def move_and_rename_file(src_path: str, dest_dir: str) -> str:
     """
@@ -1046,7 +1018,8 @@ def move_with_unique_name(src_path: str, target_dir: str):
     src_path = os.path.abspath(src_path)  # Ensure it's absolute
 
     if not os.path.exists(src_path):
-        raise FileNotFoundError(f"Source file not found: {src_path}")
+        print(f"DEBUG: Source file not found for moving: {src_path}") # Added debug print
+        return None, None # Return None if source file doesn't exist
     
     os.makedirs(target_dir, exist_ok=True)
 
@@ -1055,45 +1028,60 @@ def move_with_unique_name(src_path: str, target_dir: str):
     dest_path = os.path.join(target_dir, base_name)
     counter = 1
 
+    # Loop to find a unique name
     while os.path.exists(dest_path):
         new_name = f"{name}_{counter}{ext}"
         dest_path = os.path.join(target_dir, new_name)
         counter += 1
 
     shutil.move(src_path, dest_path)
+    
+    # Return the new filename (basename) and the absolute path
     return os.path.basename(dest_path), dest_path
 
 
 @app.post("/skin_disease_image/update/{base_name}", response_model=DoctorImageValidationResponse)
 def submit_validation(
-    base_name: str,
+    base_name: str, # This is the original base name from the frontend (e.g., "image1")
     payload: DoctorImageValidationRequest,
     db: Session = Depends(get_db)
 ):
-    # Paths to original files
-    orig_image = os.path.join(BASE_IMAGE_DIR, f"{base_name}.jpg")
-    orig_mask = os.path.join(BASE_IMAGE_DIR, f"{base_name}_mask.jpg")
-    crop_image = os.path.join(BASE_IMAGE_DIR, f"{base_name}_crop.jpg")
-    crop_mask = os.path.join(BASE_IMAGE_DIR, f"{base_name}_crop_mask.jpg")
+    # Define the single target directory for all categorized images
+    CATEGORIZED_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images")
 
-    # Determine destination
-    target_dir = os.path.join(BASE_IMAGE_DIR, payload.category.lower())
-    if payload.category.lower() not in ("disease", "non-disease"):
-        raise HTTPException(status_code=400, detail="Invalid category")
+    # Define the source paths for the images based on BASE_IMAGE_DIR and the original base_name
+    # Assuming original images are directly in BASE_IMAGE_DIR
+    orig_image_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}.jpg")
+    orig_mask_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}_mask.jpg")
+    crop_image_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}_crop.jpg")
+    crop_mask_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}_crop_mask.jpg")
 
-    image_name, image_path = move_with_unique_name(orig_image, target_dir)
-    mask_name, mask_path = move_with_unique_name(orig_mask, target_dir)
-    crop_name, crop_path = move_with_unique_name(crop_image, target_dir)
-    crop_mask_name, crop_mask_path = move_with_unique_name(crop_mask, target_dir)
+    # Move images and get their new unique filenames and absolute paths
+    image_new_filename, image_abs_path = move_with_unique_name(orig_image_src, CATEGORIZED_IMAGES_DIR)
+    mask_new_filename, mask_abs_path = move_with_unique_name(orig_mask_src, CATEGORIZED_IMAGES_DIR)
+    crop_new_filename, crop_abs_path = move_with_unique_name(crop_image_src, CATEGORIZED_IMAGES_DIR)
+    crop_mask_new_filename, crop_mask_abs_path = move_with_unique_name(crop_mask_src, CATEGORIZED_IMAGES_DIR)
+
+    # Check if any required image failed to move
+    # If a source file was not found, move_with_unique_name returns (None, None)
+    if not image_new_filename: # Original image is mandatory
+        raise HTTPException(status_code=400, detail=f"Original image file not found or could not be moved: {orig_image_src}")
+
+    # Construct the URL paths to be stored in the database
+    # These paths are relative to the `/images/` FastAPI mount point
+    image_db_path = f"/images/categorized_images/{image_new_filename}"
+    mask_db_path = f"/images/categorized_images/{mask_new_filename}" if mask_new_filename else None
+    crop_db_path = f"/images/categorized_images/{crop_new_filename}" if crop_new_filename else None
+    crop_mask_db_path = f"/images/categorized_images/{crop_mask_new_filename}" if crop_mask_new_filename else None
 
     # Save to DB
     db_record = DoctorImageValidation(
-        image_path=image_path,
-        mask_path=mask_path,
-        crop_path=crop_path,
-        crop_mask_path=crop_mask_path,
+        image_path=image_db_path,
+        mask_path=mask_db_path,
+        crop_path=crop_db_path,
+        crop_mask_path=crop_mask_db_path,
         doctor_name=payload.doctor_name,
-        rating=payload.rating,
+        #rating=payload.rating,
         comments=payload.comments,
         mask_comments=payload.mask_comments,
         disease_name=payload.disease_name,
@@ -1114,6 +1102,7 @@ def submit_validation(
     db.refresh(db_record)
 
     return db_record
+
 
 
 
@@ -1197,6 +1186,76 @@ async def get_image_set(image_name: str):
 
     return JSONResponse(content=image_urls)
 
+@app.get("/get_skin_disease_data/") # Keeping the endpoint name consistent
+async def get_skin_disease_data(db: Session = Depends(get_db)):
+    """
+    Retrieves all skin disease image entries from the database as JSON.
+    Includes all fields from the SkinDiseaseImage model.
+    """
+    images = db.query(SkinDiseaseImage).all()
+    if not images:
+        raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
+
+    # Convert SQLAlchemy objects to a list of dictionaries, including all fields
+    data = []
+    for image in images:
+        data.append({
+            "id": image.id,
+            "disease_name_amended": image.disease_name_amended,
+            "disease_name": image.disease_name,
+            "persona_digits": image.persona_digits,
+            "example_digit": image.example_digit,
+            "image_name": image.image_name,
+            "mask_name": image.mask_name,
+            "image_path": image.image_path,
+            "mask_path": image.mask_path,
+            "crop_image_name": image.crop_image_name,
+            "crop_image_path": image.crop_image_path,
+            "crop_mask_name": image.crop_mask_name,
+            "crop_mask_path": image.crop_mask_path,
+            "doctor_name": image.doctor_name,
+            "rating": image.rating,
+            "comments": image.comments,
+            "category": image.category,
+            "years_of_experience": image.years_of_experience,
+            "real_generated": image.real_generated,
+            "realism_rating": image.realism_rating,
+            "image_precision": image.image_precision,
+            "skin_color_precision": image.skin_color_precision,
+            "confidence_level": image.confidence_level,
+            "crop_quality_rating": image.crop_quality_rating,
+            "crop_diagnosis": image.crop_diagnosis,
+            "fitzpatrick_scale": image.fitzpatrick_scale,
+            "created_at": image.created_at.isoformat() if image.created_at else None # Handle datetime serialization
+        })
+
+    return JSONResponse(content=data)
+
+
+@app.get("/get_categorized_excel_data/")
+def get_categorized_excel_data(db: Session = Depends(get_db)):
+    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    images = db.query(DoctorImageValidation).all()
+    if not images:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
+
+    # Use only defined column names for DoctorImageValidation
+    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    column_names = [column.name for column in DoctorImageValidation.__table__.columns]
+    data = []
+    for image in images:
+        row_data = {}
+        for col_name in column_names:
+            value = getattr(image, col_name)
+            if isinstance(value, datetime):
+                row_data[col_name] = value.isoformat()
+            else:
+                row_data[col_name] = value
+        data.append(row_data)
+
+    return JSONResponse(content=data)
+
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 import os
@@ -1226,7 +1285,116 @@ def reset_index():
     image_index["index"] = 0
     return {"message": "Index reset"}
 
-if __name__ == "__main__":
-    import uvicorn
-    logging.basicConfig(level=logging.INFO)  # Configure logging
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Source directory for crop images to be categorized
+SOURCE_CROP_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorize_images_crops")
+CROP_IMAGES_DIR = SOURCE_CROP_IMAGES_DIR
+# Destination directory for categorized crop images
+CATEGORIZED_CROP_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
+
+# Ensure target directories exist
+os.makedirs(SOURCE_CROP_IMAGES_DIR, exist_ok=True)
+os.makedirs(CATEGORIZED_CROP_IMAGES_DIR, exist_ok=True)
+
+##### CATEGORIZED IMAGES CROPS BATCH
+import logging
+logger = logging.getLogger(__name__)
+
+@app.get("/get_crop_image_batch", response_model=List[str])
+async def get_crop_image_batch(db: Session = Depends(get_db)): # Add db dependency if querying DB
+    logger.info(f"Attempting to get crop image batch from directory: {CROP_IMAGES_DIR}")
+    try:
+        # **This is where your actual image fetching logic should be.**
+        # **Replace this placeholder with how you get your initial image list.**
+
+        # Example 1: Reading from a directory (MOST LIKELY SCENARIO FOR YOU)
+        if not os.path.exists(CROP_IMAGES_DIR):
+            logger.error(f"Image directory does NOT exist: {CROP_IMAGES_DIR}")
+            raise HTTPException(status_code=500, detail=f"Image directory not found: {CROP_IMAGES_DIR}")
+
+        all_image_filenames = [
+            f for f in os.listdir(CROP_IMAGES_DIR)
+            if os.path.isfile(os.path.join(CROP_IMAGES_DIR, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+        ]
+        all_image_filenames.sort()
+
+        # Example 2: Querying from SkinDiseaseImage table (if your images are tracked in DB)
+        # For this to work, ensure SkinDiseaseImage model has an 'image_name' column that is the filename
+        # images_from_db = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.is_categorized == False).limit(100).all() # Example filter
+        # all_image_filenames = [img.image_name for img in images_from_db if img.image_name]
+
+
+        logger.info(f"Found {len(all_image_filenames)} image files to return.")
+        logger.debug(f"Image filenames: {all_image_filenames[:5]}...")
+
+        # Directly return the list of strings
+        return all_image_filenames # <--- THIS IS THE FIX. Just return the list of strings.
+
+    except Exception as e:
+        logger.exception("Error in get_crop_image_batch endpoint:")
+        raise HTTPException(status_code=500, detail=f"Error retrieving image batch: {str(e)}")
+
+from app.schemas import CropImageValidationResponse
+@app.post("/submit_batch_categorization", response_model=List[CropImageValidationResponse])
+def submit_batch_categorization(
+    payloads: List[CropImageValidationRequest],
+    db: Session = Depends(get_db)
+):
+    """
+    Receives a list of categorizations, moves the images, and saves data to the DB.
+    """
+    records_to_add = [] # List to hold SQLAlchemy objects before commit
+    
+    for payload in payloads:
+        original_filename = payload.image_filename
+        src_path = os.path.join(SOURCE_CROP_IMAGES_DIR, original_filename)
+
+        if not os.path.exists(src_path):
+            print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
+            continue # Skip this image
+
+        new_filename, new_abs_path = move_with_unique_name(src_path, CATEGORIZED_CROP_IMAGES_DIR)
+
+        if not new_filename:
+            print(f"Warning: Could not move image {original_filename}. Skipping.")
+            continue
+
+        image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
+
+        db_record = CropImageValidation(
+            image_path=image_db_path, # This is the image's path in the database
+            doctor_name=payload.doctor_name,
+            comments=payload.comments,
+            crop_diagnosis=payload.crop_diagnosis,
+            fitzpatrick_scale=payload.fitzpatrick_scale,
+            created_at=datetime.now(timezone.utc) # <--- Use timezone.utc here
+        )
+        records_to_add.append(db_record)
+
+    try:
+        db.add_all(records_to_add) # Add all records to the session
+        db.commit() # Commit once for the whole batch
+        
+        responses_to_return = []
+        for record in records_to_add:
+            db.refresh(record) # Refresh each record to get its DB-generated ID and created_at
+
+            # Explicitly create the Pydantic response object
+            responses_to_return.append(
+                CropImageValidationResponse(
+                    id=record.id,
+                    image_filename=os.path.basename(record.image_path), # Extract filename from image_path
+                    image_path=record.image_path,
+                    doctor_name=record.doctor_name,
+                    comments=record.comments,
+                    crop_diagnosis=record.crop_diagnosis,
+                    fitzpatrick_scale=record.fitzpatrick_scale,
+                    created_at=record.created_at
+                )
+            )
+        
+        return responses_to_return # Return the list of Pydantic response objects
+
+    except Exception as e:
+        db.rollback()
+        print(f"Database transaction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error during batch submission: {e}")

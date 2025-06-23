@@ -26,7 +26,7 @@ from datetime import datetime
 # Base.metadata.create_all(bind=engine)
 import random
 from datetime import datetime, timezone # <--- Change UTC to timezone
-
+from fastapi import status # <--- Add this line
 def get_db():
     db = SessionLocal()
     try:
@@ -578,7 +578,7 @@ def delete_table_route(table_name: str, db: Session = Depends(get_db)):
     Returns:
         A dictionary indicating the result of the operation.
     """
-    if table_name not in ('doctor_image_validation', 'doctors', 'skin_disease_image'):
+    if table_name not in ('doctor_image_validation', 'doctors', 'skin_disease_image', 'crop_image_validation'):
         raise HTTPException(
             status_code=400,
             detail="Invalid table name. Must be 'doctor_image_validation', 'doctors', or 'skin_disease_image'.",
@@ -1398,3 +1398,32 @@ def submit_batch_categorization(
         db.rollback()
         print(f"Database transaction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database error during batch submission: {e}")
+
+
+@app.get("/get_excel_data_categorized_images_crops_batch/")
+def get_categorized_excel_data(db: Session = Depends(get_db)):
+    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    images = db.query(CropImageValidation).all()
+    if not images:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
+
+    # Use only defined column names for DoctorImageValidation
+    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    column_names = [column.name for column in CropImageValidation.__table__.columns]
+    data = []
+    for image in images:
+        row_data = {}
+        for col_name in column_names:
+            value = getattr(image, col_name)
+            if isinstance(value, datetime):
+                row_data[col_name] = value.isoformat()
+            else:
+                row_data[col_name] = value
+        data.append(row_data)
+
+    return JSONResponse(content=data)
+
+if __name__ == "__main__":
+    import uvicorn
+    logging.basicConfig(level=logging.INFO)  # Configure logging
+    uvicorn.run(app, host="0.0.0.0", port=8000)

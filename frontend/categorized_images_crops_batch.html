@@ -30,7 +30,6 @@
       font-weight: 700;
     }
     .global-controls { /* Container for all global inputs */
-        margin-top: 25px; /* Added top margin to separate from images */
         margin-bottom: 25px;
         padding: 15px;
         border: 1px solid #e0e0e0;
@@ -59,6 +58,7 @@
         font-family: inherit;
         transition: border-color 0.3s ease;
         box-sizing: border-box;
+        /* margin-bottom: 15px; Removed from here, moved to parent div */
     }
     .global-controls select:focus, .global-controls textarea:focus {
         outline: none;
@@ -92,7 +92,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 25px;
-      margin-bottom: 10px; /* Reduced margin, as global controls are coming after */
+      margin-bottom: 30px;
     }
     .image-item { /* Only contains image and filename now */
       border: 1px solid #e0e0e0;
@@ -194,9 +194,6 @@
     <h1>Skin Disease Image Categorization (Batch View)</h1>
 
     <form id="categorizationForm">
-      <div id="images-display-area" class="images-grid">
-        </div>
-
       <div class="global-controls">
           <div>
               <label for="doctor_name_global">Doctor's Name:</label>
@@ -245,6 +242,9 @@
           </div>
       </div>
 
+      <div id="images-display-area" class="images-grid">
+        </div>
+
       <div class="navigation-buttons">
         <button type="button" id="prev_batch_button">Previous 15 Images</button>
         <button type="button" id="next_batch_button">Next 15 Images</button>
@@ -255,7 +255,7 @@
     </form>
     
     <div class="fitzpatrick-image-container">
-      <p style="font-weight: 600; color: #34495e; margin-bottom: 10px;">Fitzpatrick Skin Tone </p>
+      <p style="font-weight: 600; color: #34495e; margin-bottom: 10px;">Fitzpatrick Skin Tone Reference:</p>
       <img src="/images/fitzpatrick.jpg" alt="Fitzpatrick Scale" />
     </div>
 
@@ -269,7 +269,7 @@
     const doctorNameGlobalSelect = document.getElementById('doctor_name_global');
     const cropDiagnosisGlobalSelect = document.getElementById('crop_diagnosis_global');
     const fitzpatrickRadiosGlobal = document.querySelectorAll('input[name="fitzpatrick_scale_global"]');
-    const commentsGlobalTextarea = document.getElementById('comments_global');
+    const commentsGlobalTextarea = document.getElementById('comments_global'); // New global comments textarea
 
     const imagesDisplayArea = document.getElementById('images-display-area');
     const categorizationForm = document.getElementById('categorizationForm');
@@ -350,12 +350,12 @@
         const globalDoctorName = doctorNameGlobalSelect.value;
         const globalCropDiagnosis = cropDiagnosisGlobalSelect.value;
         const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
-        const globalComments = commentsGlobalTextarea.value;
+        const globalComments = commentsGlobalTextarea.value; // Get global comments
 
         currentBatchFilenames.forEach(filename => {
             if (allCategorizationsData[filename]) {
                 allCategorizationsData[filename].doctor_name = globalDoctorName;
-                allCategorizationsData[filename].comments = globalComments;
+                allCategorizationsData[filename].comments = globalComments; // Apply global comments
                 allCategorizationsData[filename].crop_diagnosis = globalCropDiagnosis;
                 allCategorizationsData[filename].fitzpatrick_scale = globalFitzpatrickScale;
             }
@@ -381,11 +381,11 @@
 
         // Populate global controls based on the first image in the batch (if data exists)
         const firstImageFilename = batchFilenames[0];
-        const firstImageData = allCategorizationsData[firstImageFilename] || {};
+        const firstImageData = allCategorizationsData[firstImageFilename] || {}; // Get data or empty object
 
         doctorNameGlobalSelect.value = firstImageData.doctor_name || '';
         cropDiagnosisGlobalSelect.value = firstImageData.crop_diagnosis || '';
-        commentsGlobalTextarea.value = firstImageData.comments || '';
+        commentsGlobalTextarea.value = firstImageData.comments || ''; // Populate global comments
 
         fitzpatrickRadiosGlobal.forEach(radio => {
             radio.checked = (radio.value === firstImageData.fitzpatrick_scale);
@@ -398,7 +398,7 @@
             imageItemDiv.innerHTML = `
                 <img src="${buildImageUrl(filename)}" alt="Crop Image: ${filename}" />
                 <p class="image-filename">${filename}</p>
-            `;
+                `;
             imagesDisplayArea.appendChild(imageItemDiv);
         });
 
@@ -447,6 +447,7 @@
       const doctorName = doctorNameGlobalSelect.value;
       const globalCropDiagnosis = cropDiagnosisGlobalSelect.value;
       const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
+      // No need to get global comments here as it's already applied by saveCurrentBatchCategorization
 
       // Perform validation for all global required fields
       if (!doctorName) {
@@ -461,6 +462,12 @@
           messageContainer.textContent = "Please select a Fitzpatrick Skin Tone Classification before submitting all categorizations.";
           return;
       }
+      // If comments are mandatory, add validation here:
+      // if (!commentsGlobalTextarea.value.trim()) {
+      //     messageContainer.textContent = "Please add comments before submitting all categorizations.";
+      //     return;
+      // }
+
 
       const allPayloads = [];
       let validationError = false;
@@ -468,6 +475,9 @@
       // Iterate through all collected categorizations (across all batches)
       for (const filename of allImageFilenames) {
           const data = allCategorizationsData[filename];
+          
+          // These global values should already be applied to `data` via saveCurrentBatchCategorization.
+          // This loop primarily formats data for the backend and performs a final check.
           
           if (!data.doctor_name || !data.crop_diagnosis || !data.fitzpatrick_scale) {
               messageContainer.textContent = `Missing required data for image: ${filename}. Please ensure all global fields are selected.`;

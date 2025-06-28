@@ -1,264 +1,533 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Categorize Image Pair</title>
-    <style>
-        body { font-family: sans-serif; }
-        #categorization-form { width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
-        img { max-width: 100%; height: auto; display: block; margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
-        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; }
-        #next_image_button { margin-top: 10px; }
-        #message-container { margin-top: 20px; font-weight: bold; }
-        .backend-routes {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #eee;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-        }
-        .backend-routes h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        .backend-routes ul {
-            padding-left: 20px;
-            margin-bottom: 0;
-        }
-        .backend-routes li {
-            margin-bottom: 5px;
-        }
-        .image-pair {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .image-pair img {
-            max-width: 45%;
-            height: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .image-pair .image-title {
-            text-align: center;
-            font-size: 0.9em;
-            color: #555;
-            margin-top: 5px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skin Disease Image Categorization</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f8fa;
+      margin: 0; padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    #categorization-form {
+      background: #fff;
+      max-width: 900px;
+      width: 90%;
+      margin: 40px 0;
+      padding: 25px 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+      font-weight: 700;
+    }
+    .image-quadruplet {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 25px;
+    }
+    .image-container {
+      width: 23%;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: inset 0 0 5px #ccc;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+    .image-container:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px #3498dbaa;
+    }
+    .image-container img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-shadow: 0 2px 6px #aaa4;
+    }
+    .image-title {
+      margin-top: 8px;
+      font-weight: 600;
+      color: #34495e;
+      font-size: 0.95rem;
+    }
+    form > div {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #34495e;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1.8px solid #ccc;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #2980b9;
+      box-shadow: 0 0 6px #2980b9aa;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+      font-size: 0.95rem;
+    }
+    .likert-scale, .fitzpatrick-scale {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: nowrap;
+      margin-top: 6px;
+    }
+    .likert-scale input[type="radio"], .fitzpatrick-scale input[type="radio"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      margin: 0 4px;
+    }
+    .likert-labels {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      user-select: none;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding: 0 8px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #2980b9;
+      color: white;
+      border: none;
+      padding: 14px 26px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      transition: background-color 0.3s ease;
+      font-weight: 700;
+      margin-right: 15px;
+    }
+    button:hover {
+      background-color: #1c5980;
+    }
+    #message-container {
+      margin-top: 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #27ae60;
+      text-align: center;
+      min-height: 24px;
+    }
+    .fitzpatrick-image-container {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .fitzpatrick-image-container img {
+      width: 320px;
+      max-width: 100%;
+      border-radius: 10px;
+      border: 1px solid #bbb;
+      box-shadow: 0 2px 12px #aaa7;
+    }
+  </style>
 </head>
 <body>
-    <div id="categorization-form">
-        <h1>Categorize Image Pair</h1>
-        <div class="image-pair">
-            <div class="image-container">
-                <img id="targetImage" src="" alt="Original Image">
-                <p class="image-title">Original Image</p>
-            </div>
-            <div class="image-container">
-                <img id="maskImage" src="" alt="Mask Image">
-                <p class="image-title">Mask Image</p>
-            </div>
+  <div id="categorization-form">
+    <h1>Skin Disease Image Categorization</h1>
+
+    <div class="image-quadruplet">
+      <div class="image-container">
+        <img id="targetImage" src="" alt="Original Image" />
+        <p class="image-title">Original Image</p>
+      </div>
+      <div class="image-container">
+        <img id="maskImage" src="" alt="Mask Image" />
+        <p class="image-title">Mask Image</p>
+      </div>
+      <div class="image-container">
+        <img id="cropImage" src="" alt="Crop Image" />
+        <p class="image-title">Crop Image</p>
+      </div>
+      <div class="image-container">
+        <img id="cropMaskImage" src="" alt="Crop Mask Image" />
+        <p class="image-title">Crop Mask Image</p>
+      </div>
+    </div>
+
+    <form id="categorizationForm">
+      <input type="hidden" id="current_filename" name="current_filename" />
+      <div>
+        <label for="doctor_name">Doctor's Name:</label>
+        <select id="doctor_name" name="doctor_name" required>
+          <option value="">-- Select Doctor --</option>
+        </select>
+      </div>
+      <div>
+        <label for="comments">Comments (Original Image):</label>
+        <textarea id="comments" name="comments"></textarea>
+      </div>
+      <div>
+        <label for="mask_comments">Comments (Mask Image):</label>
+        <textarea id="mask_comments" name="mask_comments"></textarea>
+      </div>
+      <div>
+        <label for="disease_name">Disease Name:</label>
+        <input type="text" id="disease_name" name="disease_name" required />
+      </div>
+      <div>
+        <label for="category">Category:</label>
+        <select id="category" name="category">
+          <option value="disease">Disease</option>
+          <option value="non-disease">Non-Disease</option>
+        </select>
+      </div>
+      <div>
+        <label>Real vs Generated:</label>
+        <select id="real_generated" name="real_generated">
+          <option value="real">Real</option>
+          <option value="generated">Generated</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Image Quality and Realism:</label>
+        <div class="likert-scale" id="realism_rating_group">
+          <span>1</span>
+          <input type="radio" id="realism_1" name="realism_rating" value="1" />
+          <input type="radio" id="realism_2" name="realism_rating" value="2" />
+          <input type="radio" id="realism_3" name="realism_rating" value="3" />
+          <input type="radio" id="realism_4" name="realism_rating" value="4" />
+          <input type="radio" id="realism_5" name="realism_rating" value="5" />
+          <input type="radio" id="realism_6" name="realism_rating" value="6" />
+          <input type="radio" id="realism_7" name="realism_rating" value="7" />
+          <span>7</span>
         </div>
-        <form id="categorizationForm">
-            <input type="hidden" id="current_filename" name="current_filename">
-            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required></div>
-            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required></div>
-            <div><label for="comments">Comments (Original Image):</label><textarea id="comments" name="comments"></textarea></div>
-            <div><label for="mask_comments">Comments (Mask Image):</label><textarea id="mask_comments" name="mask_comments"></textarea></div>
-            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required></div>
-            <div><label for="category">Category:</label><select id="category" name="category"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
-            <button type="button" id="submit_button">Submit</button>
-            <button type="button" id="next_image_button">Next Pair</button>
-        </form>
-        <div id="message-container"></div>
-    </div>
-    <div class="backend-routes">
-        <h2>Backend Server Routes (http://localhost:8000)</h2>
-        <ul>
-            <li><strong>GET /categorize_image/</strong>: Retrieves the first uncategorized image.</li>
-            <li><strong>GET /categorize_image/{current_image_id}</strong>: Retrieves the next uncategorized image after the image with the given ID.</li>
-            <li><strong>POST /categorize_image/</strong>: Submits the categorization details for the current image, saves them to the database, and moves the image file. Requires form data: <code>image_id</code>, <code>doctor_name</code>, <code>rating</code>, <code>comments</code>, <code>mask_comments</code>, <code>disease_name</code>, and <code>category</code>.</li>
-            <li><strong>/images/{path_to_image}</strong>: Serves static image files from the <code>images</code> directory.</li>
-        </ul>
-    </div>
-    <script>
-        const targetImage = document.getElementById('targetImage');
-        const maskImage = document.getElementById('maskImage');
-        const currentFilenameInput = document.getElementById('current_filename');
-        const doctorNameInput = document.getElementById('doctor_name');
-        const ratingInput = document.getElementById('rating');
-        const commentsInput = document.getElementById('comments');
-        const maskCommentsInput = document.getElementById('mask_comments');
-        const diseaseNameInput = document.getElementById('disease_name');
-        const categorySelect = document.getElementById('category');
-        const submitButton = document.getElementById('submit_button');  // Correct ID
-        const nextButton = document.getElementById('next_image_button');
-        const messageContainer = document.getElementById('message-container');
-        const backendUrl = 'http://localhost:8000';  // Define the backend URL
-        let currentFilename = null;
-        let fetchingNextImage = false;
+      </div>
 
-        function fetchAndDisplayImage() {
-            console.log('fetchAndDisplayImage() called!');
-            fetch(`${backendUrl}/categorize_image/`)
-                .then(response => {
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            messageContainer.textContent = 'No image pairs to categorize found.';
-                            targetImage.src = '';
-                            targetImage.alt = '';
-                            maskImage.src = '';
-                            maskImage.alt = '';
-                            currentFilenameInput.value = '';
-                            submitButton.disabled = true;
-                            nextButton.disabled = true;
-                            return null;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('fetchAndDisplayImage() - Received data:', data);
-                    if (data && data.image_path && data.mask_path) {
-                        currentFilename = data.image_path.split('/').pop().replace('_mask', '');
-                        currentFilenameInput.value = currentFilename;
-                        targetImage.src = `${backendUrl}/${data.image_path}`;
-                        targetImage.alt = `Original Image ${currentFilename}`;
-                        maskImage.src = `${backendUrl}/${data.mask_path}`;
-                        maskImage.alt = `Mask Image ${currentFilename}`;
-                        messageContainer.textContent = '';
-                        doctorNameInput.value = '';
-                        ratingInput.value = '';
-                        commentsInput.value = '';
-                        maskCommentsInput.value = '';
-                        diseaseNameInput.value = '';
-                        categorySelect.value = 'disease';
-                    } else {
-                        console.log('fetchAndDisplayImage() - Data missing image paths:', data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching first image pair:', error);
-                    messageContainer.textContent = 'Failed to load initial image pair. Please check console.';
-                    targetImage.style.display = 'none';
-                    maskImage.style.display = 'none';
-                    document.getElementById('categorizationForm').style.display = 'none';
-                });
+      <div>
+        <label for="image_precision">Diagnosed Disease:</label>
+        <select id="image_precision" name="image_precision" required>
+          <option value="">-- Select Disease --</option>
+          <option value="iatrogenic_drug_induced_exanthema">Iatrogenic drug induced exanthema</option>
+          <option value="maculopapular_exanthema">Maculopapular exanthema</option>
+          <option value="morbilliform_exanthema">Morbilliform exanthema</option>
+          <option value="polymorphous_exanthema">Polymorphous exanthema</option>
+          <option value="viral_exanthema">Viral exanthema</option>
+          <option value="urticaria">Urticaria</option>
+          <option value="pediculosis">Pediculosis</option>
+          <option value="scabies">Scabies</option>
+          <option value="chickenpox">Chickenpox</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Skin Color Precision:</label>
+        <div class="likert-scale" id="skin_color_precision_group">
+          <span>1</span>
+          <input type="radio" id="skin_color_1" name="skin_color_precision" value="1" />
+          <input type="radio" id="skin_color_2" name="skin_color_precision" value="2" />
+          <input type="radio" id="skin_color_3" name="skin_color_precision" value="3" />
+          <input type="radio" id="skin_color_4" name="skin_color_precision" value="4" />
+          <input type="radio" id="skin_color_5" name="skin_color_precision" value="5" />
+          <input type="radio" id="skin_color_6" name="skin_color_precision" value="6" />
+          <input type="radio" id="skin_color_7" name="skin_color_precision" value="7" />
+          <span>7</span>
+        </div>
+      </div>
+
+      <div>
+        <label>Confidence Level:</label>
+        <div class="likert-scale" id="confidence_level_group">
+          <span>1</span>
+          <input type="radio" id="confidence_1" name="confidence_level" value="1" />
+          <input type="radio" id="confidence_2" name="confidence_level" value="2" />
+          <input type="radio" id="confidence_3" name="confidence_level" value="3" />
+          <input type="radio" id="confidence_4" name="confidence_level" value="4" />
+          <input type="radio" id="confidence_5" name="confidence_level" value="5" />
+          <input type="radio" id="confidence_6" name="confidence_level" value="6" />
+          <input type="radio" id="confidence_7" name="confidence_level" value="7" />
+          <span>7</span>
+        </div>
+      </div>
+
+      <div>
+        <label>Image Crop Quality:</label>
+        <div class="likert-scale" id="crop_quality_rating_group">
+          <span>1</span>
+          <input type="radio" id="crop_quality_1" name="crop_quality_rating" value="1" />
+          <input type="radio" id="crop_quality_2" name="crop_quality_rating" value="2" />
+          <input type="radio" id="crop_quality_3" name="crop_quality_rating" value="3" />
+          <input type="radio" id="crop_quality_4" name="crop_quality_rating" value="4" />
+          <input type="radio" id="crop_quality_5" name="crop_quality_rating" value="5" />
+          <input type="radio" id="crop_quality_6" name="crop_quality_rating" value="6" />
+          <input type="radio" id="crop_quality_7" name="crop_quality_rating" value="7" />
+          <span>7</span>
+        </div>
+      </div>
+
+      <div>
+        <label for="crop_diagnosis">Crop Diagnosed Disease:</label>
+        <select id="crop_diagnosis" name="crop_diagnosis" required>
+          <option value="">-- Select Crop Diagnosis --</option>
+          <option value="iatrogenic_drug_induced_exanthema">Iatrogenic drug induced exanthema</option>
+          <option value="maculopapular_exanthema">Maculopapular exanthema</option>
+          <option value="morbilliform_exanthema">Morbilliform exanthema</option>
+          <option value="polymorphous_exanthema">Polymorphous exanthema</option>
+          <option value="viral_exanthema">Viral exanthema</option>
+          <option value="urticaria">Urticaria</option>
+          <option value="pediculosis">Pediculosis</option>
+          <option value="scabies">Scabies</option>
+          <option value="chickenpox">Chickenpox</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Fitzpatrick Skin Tone Classification:</label>
+        <div class="fitzpatrick-scale">
+          <span>Type I</span>
+          <input type="radio" id="fitzpatrick_I" name="fitzpatrick_scale" value="I" />
+          <span>Type II</span>
+          <input type="radio" id="fitzpatrick_II" name="fitzpatrick_scale" value="II" />
+          <span>Type III</span>
+          <input type="radio" id="fitzpatrick_III" name="fitzpatrick_scale" value="III" />
+          <span>Type IV</span>
+          <input type="radio" id="fitzpatrick_IV" name="fitzpatrick_scale" value="IV" />
+          <span>Type V</span>
+          <input type="radio" id="fitzpatrick_V" name="fitzpatrick_scale" value="V" />
+          <span>Type VI</span>
+          <input type="radio" id="fitzpatrick_VI" name="fitzpatrick_scale" value="VI" />
+        </div>
+      </div>
+
+      <div class="fitzpatrick-image-container">
+        <img src="/images/fitzpatrick.jpg" alt="Fitzpatrick Scale" style="max-width: 100%; height: auto;">
+      </div>
+
+      <div style="margin-top: 25px; text-align: center;">
+        <button type="button" id="submit_button">Submit</button>
+        <button type="button" id="next_image_button">Next Image</button>
+      </div>
+    </form>
+    <div id="message-container"></div>
+  </div>
+
+  <script>
+    const backendUrl = 'https://medicalimages.apice.unibo.it';
+
+    const doctorNameInput = document.getElementById('doctor_name');
+
+    const targetImage = document.getElementById('targetImage');
+    const maskImage = document.getElementById('maskImage');
+    const cropImage = document.getElementById('cropImage');
+    const cropMaskImage = document.getElementById('cropMaskImage');
+
+    const currentFilenameInput = document.getElementById('current_filename');
+    const commentsInput = document.getElementById('comments');
+    const maskCommentsInput = document.getElementById('mask_comments');
+    const diseaseNameInput = document.getElementById('disease_name');
+    const categorySelect = document.getElementById('category');
+    const realGeneratedSelect = document.getElementById('real_generated');
+
+    const submitButton = document.getElementById('submit_button');
+    const nextButton = document.getElementById('next_image_button');
+    const messageContainer = document.getElementById('message-container');
+
+    let allBaseNames = [];
+    let currentIndex = 0;
+    let doctorsList = [];
+
+    function buildImageUrl(baseName, suffix = '') {
+      return `${backendUrl}/images/${baseName}${suffix}.jpg`;
+    }
+
+    async function loadBaseNames() {
+      try {
+        const response = await fetch(`${backendUrl}/get_all_base_names`);
+        if (!response.ok) throw new Error('Failed to load base image names');
+        allBaseNames = await response.json();
+      } catch (error) {
+        console.error(error);
+        messageContainer.textContent = 'Failed to load images.';
+      }
+    }
+
+    async function loadDoctors() {
+      try {
+        const res = await fetch(`${backendUrl}/doctors/`);
+        if (!res.ok) throw new Error('Failed to fetch doctors');
+        doctorsList = await res.json();
+
+        doctorNameInput.innerHTML = '<option value="">-- Select Doctor --</option>';
+        doctorsList.forEach(doc => {
+          const option = document.createElement('option');
+          option.value = doc.doctor_name;
+          option.textContent = doc.doctor_name;
+          doctorNameInput.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load doctors:', error);
+        messageContainer.textContent = 'Failed to load doctors.';
+      }
+    }
+
+    function displayImages(index) {
+      if (index < 0 || index >= allBaseNames.length) {
+        messageContainer.textContent = 'No more images.';
+        return;
+      }
+      const baseName = allBaseNames[index];
+      currentFilenameInput.value = baseName;
+      targetImage.src = buildImageUrl(baseName);
+      maskImage.src = buildImageUrl(baseName, '_mask');
+      cropImage.src = buildImageUrl(baseName, '_crop');
+      cropMaskImage.src = buildImageUrl(baseName, '_crop_mask');
+
+      messageContainer.textContent = '';
+
+      doctorNameInput.value = '';
+      commentsInput.value = '';
+      maskCommentsInput.value = '';
+      diseaseNameInput.value = '';
+      categorySelect.value = 'disease';
+      realGeneratedSelect.value = 'real';
+
+      document.querySelectorAll('input[type="radio"]').forEach(radio => radio.checked = false);
+    }
+
+    window.onload = async () => {
+      await Promise.all([loadBaseNames(), loadDoctors()]);
+      if (allBaseNames.length > 0) {
+        displayImages(0);
+      } else {
+        messageContainer.textContent = 'No images found.';
+      }
+    };
+
+    nextButton.onclick = () => {
+      if (currentIndex + 1 < allBaseNames.length) {
+        currentIndex++;
+        displayImages(currentIndex);
+      } else {
+        messageContainer.textContent = 'No more images.';
+      }
+    };
+
+    submitButton.onclick = () => {
+      if (allBaseNames.length === 0) return;
+
+      const baseName = allBaseNames[currentIndex];
+      // Function to construct the "database-friendly" relative path
+      // This should match the format that DoctorImageValidationRequest expects
+      // which, given your backend logic, would be the *original* relative path
+      // before the move, if you intend to send the original paths.
+      // Let's re-evaluate: your backend code *moves* the files, then generates
+      // new paths and stores those in the DB. The DoctorImageValidationRequest
+      // schema includes image_path etc. which are then used to populate the
+      // new_db_entry directly. This means the frontend needs to send the *final*
+      // paths as they would appear in the DB, OR the backend needs to derive them.
+
+      // Given the backend's current logic for the /update route:
+      // It takes `base_name` from the URL, then internally determines
+      // `orig_image_src`, `orig_mask_src`, etc.
+      // THEN it moves them, gets `image_new_filename`, `mask_new_filename`, etc.
+      // AND THEN it constructs `image_db_path`, `mask_db_path` for the DB.
+
+      // This implies that the image_path in your DoctorImageValidationRequest
+      // schema is currently redundant for this /update endpoint, as the backend
+      // already derives the new paths it needs.
+
+      // If you MUST have them in the request payload, they would logically refer
+      // to the *original* paths before the move, as the frontend doesn't know
+      // the "new unique filenames" beforehand.
+
+      // Let's assume you want to send the *original* relative paths,
+      // matching how your images are displayed initially.
+      function getOriginalDbPath(name, suffix = '') {
+          // This assumes your backend serves images from /images/categorized_images/
+          // for the *original* files. Let's look at your backend again:
+          // orig_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}.jpg")
+          // This means the original relative path is /categorized_images/{base_name}.jpg
+          // So, in the frontend, for the payload, it should be something like:
+          return `/images/categorized_images/${name}${suffix}.jpg`;
+      }
+
+      // Construct these paths for the payload
+      const original_image_path = getOriginalDbPath(baseName);
+      const original_mask_path = getOriginalDbPath(baseName, '_mask');
+      const original_crop_path = getOriginalDbPath(baseName, '_crop');
+      const original_crop_mask_path = getOriginalDbPath(baseName, '_crop_mask');
+
+      // Ensure optional number fields send `null` if empty/NaN
+      const getNumericValue = (selector) => {
+          const element = document.querySelector(selector);
+          const value = element?.value;
+          // Check if the element exists and if its value is a non-empty string that can be parsed as a number
+          // If it's an empty string, or parsing results in NaN, return null for optional int fields
+          return (value !== null && value !== undefined && value !== '') ? Number(value) : null;
+      };
+
+      const payload = {
+        // Add the image paths here:
+        image_path: original_image_path,
+        mask_path: original_mask_path, // Will be '/images/categorized_images/{baseName}_mask.jpg' or null if not found
+        crop_path: original_crop_path,
+        crop_mask_path: original_crop_mask_path,
+        doctor_name: doctorNameInput.value,
+        comments: commentsInput.value,
+        mask_comments: maskCommentsInput.value,
+        disease_name: diseaseNameInput.value,
+        category: categorySelect.value,
+        real_generated: realGeneratedSelect.value,
+        realism_rating: Number(document.querySelector('input[name="realism_rating"]:checked')?.value),
+        image_precision: document.getElementById('image_precision').value,
+        skin_color_precision: Number(document.querySelector('input[name="skin_color_precision"]:checked')?.value),
+        confidence_level: Number(document.querySelector('input[name="confidence_level"]:checked')?.value),
+        crop_quality_rating: Number(document.querySelector('input[name="crop_quality_rating"]:checked')?.value),
+        crop_diagnosis: document.getElementById('crop_diagnosis')?.value,
+        fitzpatrick_scale: document.querySelector('input[name="fitzpatrick_scale"]:checked')?.value,
+      };
+      console.log(JSON.stringify(payload));
+
+      fetch(`${backendUrl}/skin_disease_image/update/${encodeURIComponent(baseName)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        messageContainer.textContent = 'Entry saved successfully!';
+        if (currentIndex + 1 < allBaseNames.length) {
+          currentIndex++;
+          displayImages(currentIndex);
+        } else {
+          messageContainer.textContent += ' No more images.';
         }
-
-        fetchAndDisplayImage();
-
-        submitButton.addEventListener('click', () => { // Make sure the event listener is attached to the correct element
-            if (!currentFilename) {
-                alert('No image pair to submit.');
-                return;
-            }
-            const formData = new FormData();
-            formData.append('current_filename', currentFilename);
-            formData.append('doctor_name', doctorNameInput.value);
-            formData.append('rating', ratingInput.value);
-            formData.append('comments', commentsInput.value);
-            formData.append('mask_comments', maskCommentsInput.value);
-            formData.append('disease_name', diseaseNameInput.value);
-            formData.append('category', categorySelect.value);
-            console.log("Submitting data:", [...formData.entries()]);
-            fetch(`${backendUrl}/categorize_image/`, {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => {
-                console.log("Response from server:", response);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Data from server:", data);
-                messageContainer.textContent = data.message;
-                fetchNextImage();
-            })
-            .catch(error => {
-                console.error('Error categorizing image pair:', error);
-                messageContainer.textContent = 'Failed to categorize image pair. Please check console.';
-            });
-        });
-
-        nextButton.addEventListener('click', () => {
-            console.log('nextButton clicked - currentFilename:', currentFilename);
-            if (!currentFilename) {
-                alert('No current image pair.');
-                return;
-            }
-            if (fetchingNextImage) {
-                console.log('Already fetching next image, ignoring click.');
-                return;
-            }
-            fetchingNextImage = true;
-            fetchNextImage();
-        });
-
-        function fetchNextImage() {
-            if (fetchingNextImage) {
-                console.log('fetchNextImage() called while already fetching...');
-                return;
-            }
-            fetchingNextImage = true;
-            console.log('fetchNextImage() - currentFilename:', currentFilename);
-            fetch(`${backendUrl}/categorize_image/${currentFilename}`)
-                .then(response => {
-                    if (!response.ok) {
-                         if (response.status === 404) {
-                            messageContainer.textContent = 'No more image pairs to categorize.';
-                            targetImage.src = '';
-                            targetImage.alt = '';
-                            maskImage.src = '';
-                            maskImage.alt = '';
-                            currentFilenameInput.value = '';
-                            submitButton.disabled = true;
-                            nextButton.disabled = true;
-                            return null;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('fetchNextImage() - Received data:', data);
-                    if (data && data.image_path && data.mask_path) {
-                        currentFilename = data.image_path.split('/').pop().replace('_mask', '');
-                        currentFilenameInput.value = currentFilename;
-                        targetImage.src = `${backendUrl}/${data.image_path}`;
-                        targetImage.alt = `Original Image ${currentFilename}`;
-                        maskImage.src = `${backendUrl}/${data.mask_path}`;
-                        maskImage.alt = `Mask Image ${currentFilename}`;
-                        messageContainer.textContent = '';
-                        doctorNameInput.value = '';
-                        ratingInput.value = '';
-                        commentsInput.value = '';
-                        maskCommentsInput.value = '';
-                        diseaseNameInput.value = '';
-                        categorySelect.value = 'disease';
-                    } else {
-                         console.log('fetchNextImage() - Data missing image paths:', data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching next image pair:', error);
-                    messageContainer.textContent = 'Failed to load next image pair. Please check console.';
-                    targetImage.style.display = 'none';
-                    maskImage.style.display = 'none';
-                    document.getElementById('categorizationForm').style.display = 'none';
-                })
-                .finally(() => {
-                    fetchingNextImage = false;
-                    console.log('fetchNextImage() - finally: fetchingNextImage set to false');
-                });
-            }
-    </script>
+      })
+      .catch(err => {
+        console.error('Error saving entry:', err);
+        messageContainer.textContent = 'Failed to save entry.';
+      });
+    };
+  </script>
 </body>
 </html>

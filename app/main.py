@@ -1047,14 +1047,14 @@ def submit_validation(
     db: Session = Depends(get_db)
 ):
     # Define the single target directory for all categorized images
-    CATEGORIZED_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images")
+    CATEGORIZED_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
 
     # Define the source paths for the images based on BASE_IMAGE_DIR and the original base_name
     # Assuming original images are directly in BASE_IMAGE_DIR
-    orig_image_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}.jpg")
-    orig_mask_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}_mask.jpg")
-    crop_image_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}_crop.jpg")
-    crop_mask_src = os.path.join(BASE_IMAGE_DIR, f"{base_name}_crop_mask.jpg")
+    orig_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}.jpg")
+    orig_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_mask.jpg")
+    crop_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop.jpg")
+    crop_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop_mask.jpg")
 
     # Move images and get their new unique filenames and absolute paths
     image_new_filename, image_abs_path = move_with_unique_name(orig_image_src, CATEGORIZED_IMAGES_DIR)
@@ -1112,7 +1112,7 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-IMAGE_DIR = "images"  # path to your images folder
+IMAGE_DIR = "images/categorized_images"  # path to your images folder
 
 @app.get("/get_all_base_names")
 async def get_all_base_names():
@@ -1422,6 +1422,51 @@ def get_categorized_excel_data(db: Session = Depends(get_db)):
         data.append(row_data)
 
     return JSONResponse(content=data)
+
+@app.post("/create_new_categorization/", response_model=DoctorImageValidationResponse)
+async def create_new_categorization(
+    data: DoctorImageValidationRequest, # Use the request schema
+    db: Session = Depends(get_db),
+):
+    """
+    Creates a new categorization entry in the database based on the provided data.
+    The new entry will have a new ID. Image paths will be copied if needed.
+    """
+    # Create a new instance of the model with the data from the request
+    # Note: 'id' and 'created_at' will be handled by the database (auto-increment/default)
+    new_db_entry = DoctorImageValidation(
+        image_path=data.image_path, # These are crucial for the new entry
+        mask_path=data.mask_path,
+        crop_path=data.crop_path,
+        crop_mask_path=data.crop_mask_path,
+        doctor_name=data.doctor_name,
+        #rating=data.rating,
+        comments=data.comments,
+        mask_comments=data.mask_comments,
+        disease_name=data.disease_name,
+        category=data.category,
+        real_generated=data.real_generated,
+        realism_rating=data.realism_rating,
+        image_precision=data.image_precision,
+        skin_color_precision=data.skin_color_precision,
+        confidence_level=data.confidence_level,
+        crop_quality_rating=data.crop_quality_rating,
+        crop_diagnosis=data.crop_diagnosis,
+        fitzpatrick_scale=data.fitzpatrick_scale,
+    )
+
+    db.add(new_db_entry)
+    db.commit()
+    db.refresh(new_db_entry)
+
+    # You might want to handle file duplication here if the image_path/mask_path
+    # needs to be physically duplicated for a "new" entry, rather than just referencing
+    # the existing files. For now, it just creates a new DB record pointing to existing files.
+    # If you need to duplicate files, you'd add os.path.copy2 logic here,
+    # and update new_db_entry.image_path and new_db_entry.mask_path accordingly.
+
+    return new_db_entry
+
 
 if __name__ == "__main__":
     import uvicorn

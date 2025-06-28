@@ -27,76 +27,6 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
-        .form-container {
-            width: 500px;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            display: none;
-            flex-direction: column;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input[type="text"],
-        input[type="number"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        textarea {
-            resize: vertical;
-        }
-        button {
-            background-color: #551A8B;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #440077;
-        }
-        .home-button {
-            display: block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #f0f0f0;
-            color: #333;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            text-decoration: none;
-            text-align: center;
-            width: 100px;
-        }
-        .home-button:hover {
-            background-color: #e0e0e0;
-        }
-        #message-container {
-            margin-top: 20px;
-            color: green;
-            font-weight: bold;
-        }
-        .error-message {
-            color: red;
-            margin-top: 10px;
-        }
-
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -114,19 +44,6 @@
         .data-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        .edit-button {
-            background-color: #007bff;
-            color: white;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-right: 5px;
-        }
-        .edit-button:hover {
-            background-color: #0056b3;
-        }
         .editable {
             background-color: #fff;
             border: 1px solid #ddd;
@@ -140,61 +57,61 @@
             border-color: #007bff;
             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .pagination-buttons {
+            margin-top: 20px;
+        }
+        .pagination-buttons button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+        #message-container {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        #error-container {
+            color: red;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>View/Edit Images Details</h1>
-    <div class="disease-selection">
-        <label for="selectedDisease">Select Disease:</label>
-        <select id="selectedDisease" name="selectedDisease">
-            <option value="">-- Select a Disease --</option>
-        </select>
-        <button id="viewImagesButton">View Images</button>
-    </div>
+    <h1>View/Edit Image Details</h1>
 
-    <div class="image-container" style="display: none;">
+    <div class="image-container">
         <div style="text-align: center;">
-            <img id="targetImage" src="" alt="Original Image">
+            <img id="current-original-image" src="" alt="Original Image" style="max-width: 300px; height: auto;">
             <p>Original Image</p>
         </div>
         <div style="text-align: center;">
-            <img id="maskImage" src="" alt="Mask Image">
+            <img id="current-mask-image" src="" alt="Mask Image" style="max-width: 300px; height: auto;">
             <p>Mask Image</p>
         </div>
     </div>
 
-    <div class="form-container" style="display: none;">
-        <form id="imageDetailsForm">
-            <input type="hidden" id="imageId" name="imageId">
-            <div><label for="doctor_name">Doctor's Name:</label><input type="text" id="doctor_name" name="doctor_name" required class="editable"></div>
-            <div><label for="rating">Rating (1-5):</label><input type="number" id="rating" name="rating" min="1" max="5" required class="editable"></div>
-            <div><label for="comments">Comments (Original Image):</label><textarea id="comments" name="comments" class="editable"></textarea></div>
-            <div><label for="mask_comments">Comments (Mask Image):</label><textarea id="mask_comments" name="mask_comments" class="editable"></textarea></div>
-            <div><label for="disease_name">Disease Name:</label><input type="text" id="disease_name" name="disease_name" required class="editable"></div>
-            <div><label for="category">Category:</label><select id="category" name="category" class="editable"><option value="disease">Disease</option><option value="non-disease">Non-Disease</option></select></div>
-            <button type="submit">Update Details</button>
-        </form>
-        <div id="message-container"></div>
-        <div id="error-container" class="error-message"></div>
-    </div>
-
-    <div style="display: flex; gap: 10px;">
-        <button id="prevButton" style="display: none;">Previous</button>
-        <button id="nextButton" style="display: none;">Next</button>
-    </div>
-
-    <table class="data-table" style="display: none;">
+    <table class="data-table">
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Image Path</th>
-                <th>Mask Path</th>
                 <th>Doctor's Name</th>
-                <th>Rating</th>
                 <th>Comments</th>
                 <th>Mask Comments</th>
                 <th>Disease Name</th>
                 <th>Category</th>
+                <th>Years of Experience</th>
+                <th>Real/Generated</th>
+                <th>Realism Rating</th>
+                <th>Image Precision</th>
+                <th>Skin Color Precision</th>
+                <th>Confidence Level</th>
+                <th>Crop Quality Rating</th>
+                <th>Crop Diagnosis</th>
+                <th>Fitzpatrick Scale</th>
                 <th>Created At</th>
                 <th>Actions</th>
             </tr>
@@ -203,132 +120,123 @@
         </tbody>
     </table>
 
-    <a href="/" class="home-button">Home</a>
+    <div class="pagination-buttons">
+        <button id="prev-button" disabled>Previous</button>
+        <span id="current-page">Page 1</span>
+        <button id="next-button" disabled>Next</button>
+    </div>
+
+    <div id="message-container"></div>
+    <div id="error-container"></div>
+
+    <a href="/" class="home-button" style="display: block; margin-top: 20px; text-align: center; padding: 10px; background-color: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 5px; text-decoration: none; width: 100px;">Home</a>
 
     <script>
-        const selectedDiseaseSelect = document.getElementById('selectedDisease');
-        const viewImagesButton = document.getElementById('viewImagesButton');
-        const imageContainer = document.querySelector('.image-container');
-        const targetImage = document.getElementById('targetImage');
-        const maskImage = document.getElementById('maskImage');
-        const imageDetailsForm = document.getElementById('imageDetailsForm');
+        const currentOriginalImage = document.getElementById('current-original-image');
+        const currentMaskImage = document.getElementById('current-mask-image');
+        const dataTableBody = document.getElementById('data-table-body');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const currentPageSpan = document.getElementById('current-page');
         const messageContainer = document.getElementById('message-container');
         const errorContainer = document.getElementById('error-container');
-        const prevButton = document.getElementById('prevButton');
-        const nextButton = document.getElementById('nextButton');
+        const backendUrl = 'https://medicalimages.apice.unibo.it';
 
-        const doctorNameInput = document.getElementById('doctor_name');
-        const ratingInput = document.getElementById('rating');
-        const commentsInput = document.getElementById('comments');
-        const maskCommentsInput = document.getElementById('mask_comments');
-        const diseaseNameInput = document.getElementById('disease_name');
-        const categorySelect = document.getElementById('category');
-        const imageIdInput = document.getElementById('imageId');
-
-        const dataTable = document.querySelector('.data-table');
-        const dataTableBody = document.getElementById('data-table-body');
-
-
-        const backendUrl = 'http://localhost:8000';
-        let diseaseNames = [];
-        let images = [];
+        let allCategorizations = [];
         let currentIndex = 0;
-        let selectedDisease = '';
-        let editingId = null;
 
+        function updatePagination() {
+            const hasPrev = currentIndex > 0;
+            const hasNext = currentIndex < allCategorizations.length - 1;
+            prevButton.disabled = !hasPrev;
+            nextButton.disabled = !hasNext;
+            currentPageSpan.textContent = `Page ${currentIndex + 1} of ${allCategorizations.length}`;
 
-        function clearForm() {
-            imageIdInput.value = '';
-            doctorNameInput.value = '';
-            ratingInput.value = '';
-            commentsInput.value = '';
-            maskCommentsInput.value = '';
-            diseaseNameInput.value = '';
-            categorySelect.value = '';
-            errorContainer.textContent = '';
-            messageContainer.textContent = '';
-            editingId = null;
-        }
-
-        function displayImage(index) {
-            if (index < 0 || index >= images.length) {
-                return;
+            if (allCategorizations.length > 0) {
+                const currentEntry = allCategorizations[currentIndex];
+                currentOriginalImage.src = `${backendUrl}/${currentEntry.image_path}`;
+                currentOriginalImage.alt = `Original Image ${currentEntry.image_path}`;
+                currentMaskImage.src = `${backendUrl}/${currentEntry.mask_path}`;
+                currentMaskImage.alt = `Mask Image ${currentEntry.mask_path}`;
+                populateTable(currentEntry);
+            } else {
+                currentOriginalImage.src = '';
+                currentMaskImage.src = '';
+                dataTableBody.innerHTML = '';
+                currentPageSpan.textContent = 'No images found';
+                prevButton.disabled = true;
+                nextButton.disabled = true;
             }
-
-            const image = images[index];
-            targetImage.src = `${backendUrl}/${image.image_path}`;
-            targetImage.alt = `Original Image ${image.image_path}`;
-            maskImage.src = `${backendUrl}/${image.mask_path}`;
-            maskImage.alt = `Mask Image ${image.mask_path}`;
-            populateForm(image);
-
-            imageContainer.style.display = 'flex';
-            imageDetailsForm.style.display = 'flex';
-            prevButton.style.display = index > 0 ? 'inline-block' : 'none';
-            nextButton.style.display = index < images.length - 1 ? 'inline-block' : 'none';
-
-            updateDataTable(images);
         }
 
-        function populateForm(image) {
-            editingId = image.id;
-            imageIdInput.value = image.id;
-            doctorNameInput.value = image.doctor_name || '';
-            ratingInput.value = image.rating || '';
-            commentsInput.value = image.comments || '';
-            maskCommentsInput.value = image.mask_comments || '';
-            diseaseNameInput.value = image.disease_name || '';
-            categorySelect.value = image.category || '';
-        }
-
-        function updateDataTable(data) {
+        function populateTable(entry) {
             dataTableBody.innerHTML = '';
-            data.forEach(item => {
+            if (entry) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${item.image_path}</td>
-                    <td>${item.mask_path}</td>
-                    <td><input type="text" value="${item.doctor_name || ''}" class="editable" data-field="doctor_name" data-id="${item.id}"></td>
-                    <td><input type="number" value="${item.rating || ''}" class="editable" data-field="rating" data-id="${item.id}"></td>
-                    <td><input type="text" value="${item.comments || ''}" class="editable" data-field="comments" data-id="${item.id}"></td>
-                    <td><input type="text" value="${item.mask_comments || ''}" class="editable" data-field="mask_comments" data-id="${item.id}"></td>
-                    <td><input type="text" value="${item.disease_name || ''}" class="editable" data-field="disease_name" data-id="${item.id}"></td>
+                    <td>${entry.id}</td>
+                    <td><input type="text" value="${entry.doctor_name || ''}" class="editable" data-field="doctor_name" data-id="${entry.id}"></td>
+                    <td><textarea class="editable" data-field="comments" data-id="${entry.id}">${entry.comments || ''}</textarea></td>
+                    <td><textarea class="editable" data-field="mask_comments" data-id="${entry.id}">${entry.mask_comments || ''}</textarea></td>
+                    <td><input type="text" value="${entry.disease_name || ''}" class="editable" data-field="disease_name" data-id="${entry.id}"></td>
                     <td>
-                        <select class="editable" data-field="category" data-id="${item.id}">
-                            <option value="disease" ${item.category === 'disease' ? 'selected' : ''}>Disease</option>
-                            <option value="non-disease" ${item.category === 'non-disease' ? 'selected' : ''}>Non-Disease</option>
+                        <select class="editable" data-field="category" data-id="${entry.id}">
+                            <option value="disease" ${entry.category === 'disease' ? 'selected' : ''}>Disease</option>
+                            <option value="non-disease" ${entry.category === 'non-disease' ? 'selected' : ''}>Non-Disease</option>
                         </select>
                     </td>
-                    <td>${item.created_at}</td>
-                    <td><button class="save-button" data-id="${item.id}">Save</button></td>
+                    <td><input type="number" value="${entry.years_of_experience || ''}" class="editable" data-field="years_of_experience" data-id="${entry.id}"></td>
+                    <td>
+                        <select class="editable" data-field="real_generated" data-id="${entry.id}">
+                            <option value="real" ${entry.real_generated === 'real' ? 'selected' : ''}>Real</option>
+                            <option value="generated" ${entry.real_generated === 'generated' ? 'selected' : ''}>Generated</option>
+                        </select>
+                    </td>
+                    <td><input type="number" value="${entry.realism_rating || ''}" class="editable" data-field="realism_rating" data-id="${entry.id}"></td>
+                    <td><input type="text" value="${entry.image_precision || ''}" class="editable" data-field="image_precision" data-id="${entry.id}"></td>
+                    <td><input type="number" value="${entry.skin_color_precision || ''}" class="editable" data-field="skin_color_precision" data-id="${entry.id}"></td>
+                    <td><input type="number" value="${entry.confidence_level || ''}" class="editable" data-field="confidence_level" data-id="${entry.id}"></td>
+                    <td><input type="number" value="${entry.crop_quality_rating || ''}" class="editable" data-field="crop_quality_rating" data-id="${entry.id}"></td>
+                    <td><input type="text" value="${entry.crop_diagnosis || ''}" class="editable" data-field="crop_diagnosis" data-id="${entry.id}"></td>
+                    <td><input type="text" value="${entry.fitzpatrick_scale || ''}" class="editable" data-field="fitzpatrick_scale" data-id="${entry.id}"></td>
+                    <td>${new Date(entry.created_at).toLocaleString()}</td>
+                    <td class="action-buttons">
+                        <button class="save-new-entry-button" data-id="${entry.id}">Save as New</button>
+                    </td>
                 `;
                 dataTableBody.appendChild(row);
-            });
-            dataTable.style.display = 'table';
 
-            const saveButtons = document.querySelectorAll('.save-button');
-            saveButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const id = button.dataset.id;
-                    const updatedFields = {};
-                    document.querySelectorAll(`.editable[data-id="${id}"]`).forEach(input => {
-                        updatedFields[input.dataset.field] = input.value;
-                    });
+                const saveNewEntryButtons = dataTableBody.querySelectorAll('.save-new-entry-button');
+                saveNewEntryButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const originalId = button.dataset.id;
+                        const updatedFields = {};
+                        const row = button.closest('tr');
+                        row.querySelectorAll('.editable[data-id="' + originalId + '"]').forEach(input => {
+                            updatedFields[input.dataset.field] = input.type === 'number' ? parseFloat(input.value) : input.value;
+                        });
 
-                    const formData = new FormData();
-                    for (const key in updatedFields) {
-                        formData.append(key, updatedFields[key]);
-                    }
+                        // Add the original image_path and mask_path to the payload
+                        const originalEntry = allCategorizations.find(item => item.id == originalId);
+                        if (originalEntry) {
+                            updatedFields['image_path'] = originalEntry.image_path;
+                            updatedFields['mask_path'] = originalEntry.mask_path;
+                            updatedFields['crop_path'] = originalEntry.crop_path;
+                            updatedFields['crop_mask_path'] = originalEntry.crop_mask_path;
+                        }
 
-                    fetch(`${backendUrl}/update_image_details/${id}`, {
-                        method: 'POST',
-                        body: formData,
-                    })
+
+                        fetch(`${backendUrl}/create_new_categorization/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json', // Change to application/json
+                            },
+                            body: JSON.stringify(updatedFields), // Stringify the JSON object
+                        })
                         .then(response => {
                             if (!response.ok) {
                                 return response.json().then(err => {
-                                    throw new Error(err.detail || 'Failed to update image details');
+                                    throw new Error(err.detail || 'Failed to create new entry');
                                 });
                             }
                             return response.json();
@@ -336,19 +244,22 @@
                         .then(data => {
                             messageContainer.textContent = data.message;
                             errorContainer.textContent = '';
-                            fetchAndDisplayImages(selectedDisease);
+                            fetchAllCategorizations(); // Refresh data to show the new entry
                         })
                         .catch(error => {
-                            console.error('Error updating image details:', error);
+                            console.error('Error creating new entry:', error);
                             errorContainer.textContent = error.message;
                             messageContainer.textContent = '';
                         });
+                    });
                 });
-            });
+            } else {
+                dataTableBody.innerHTML = '<tr><td colspan="17">No data available for this image.</td></tr>';
+            }
         }
 
-        function fetchAndDisplayImages(disease) {
-            fetch(`${backendUrl}/disease_images/${disease}`)
+        function fetchAllCategorizations() {
+            fetch(`${backendUrl}/all_categorizations/`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -356,127 +267,33 @@
                     return response.json();
                 })
                 .then(data => {
-                    images = data;
+                    allCategorizations = data;
                     currentIndex = 0;
-                    if (images.length > 0) {
-                        displayImage(currentIndex);
-                        messageContainer.textContent = `Displaying images for ${disease}`;
-                    } else {
-                        imageContainer.style.display = 'none';
-                        imageDetailsForm.style.display = 'none';
-                        prevButton.style.display = 'none';
-                        nextButton.style.display = 'none';
-                        messageContainer.textContent = `No images found for ${disease}`;
-                    }
+                    updatePagination();
                 })
                 .catch(error => {
-                    console.error('Error fetching images:', error);
-                    messageContainer.textContent = 'Failed to fetch images. Please check the console.';
-                    imageContainer.style.display = 'none';
-                    imageDetailsForm.style.display = 'none';
-                    prevButton.style.display = 'none';
-                    nextButton.style.display = 'none';
-
+                    console.error('Error fetching all categorizations:', error);
+                    errorContainer.textContent = 'Failed to load categorizations.';
+                    messageContainer.textContent = '';
                 });
         }
 
-
-
-        // Event Listeners
-        viewImagesButton.addEventListener('click', () => {
-            selectedDisease = selectedDiseaseSelect.value;
-            if (selectedDisease) {
-                fetchAndDisplayImages(selectedDisease);
-            } else {
-                alert('Please select a disease.');
+        prevButton.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updatePagination();
             }
         });
 
-        prevButton.addEventListener('click', () => {
-            currentIndex--;
-            displayImage(currentIndex);
-        });
-
         nextButton.addEventListener('click', () => {
-            currentIndex++;
-            displayImage(currentIndex);
+            if (currentIndex < allCategorizations.length - 1) {
+                currentIndex++;
+                updatePagination();
+            }
         });
 
-        imageDetailsForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-
-            const formData = new FormData(imageDetailsForm);
-            const id = formData.get('imageId');
-            const doctorName = formData.get('doctor_name');
-            const rating = formData.get('rating');
-            const comments = formData.get('comments');
-            const maskComments = formData.get('mask_comments');
-            const diseaseName = formData.get('disease_name');
-            const category = formData.get('category');
-
-
-
-            fetch(`${backendUrl}/update_image_details/${id}`, {
-                method: 'POST',
-                body: formData,
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.detail || 'Failed to update image details');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    messageContainer.textContent = data.message;
-                    errorContainer.textContent = '';
-                    images = images.map(img => {
-                        if (img.id === parseInt(id)) {
-                            return {
-                                ...img,
-                                doctor_name: doctorName,
-                                rating: rating,
-                                comments: comments,
-                                mask_comments: maskComments,
-                                disease_name: diseaseName,
-                                category: category,
-                            }
-                        }
-                        return img;
-                    });
-                    fetchAndDisplayImages(selectedDisease);
-                    clearForm();
-                })
-                .catch(error => {
-                    console.error('Error updating image details:', error);
-                    errorContainer.textContent = error.message;
-                    messageContainer.textContent = '';
-                });
-        });
-
-        // Initial population of disease dropdown
-        fetch(`${backendUrl}/disease_names/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                diseaseNames = data;
-                diseaseNames.forEach(diseaseName => {
-                    const option = document.createElement('option');
-                    option.value = diseaseName;
-                    option.textContent = diseaseName;
-                    selectedDiseaseSelect.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching disease names:', error);
-                messageContainer.textContent = 'Failed to load diseases. Please check the console.';
-            });
-
+        // Fetch all categorizations on page load
+        fetchAllCategorizations();
     </script>
 </body>
 </html>

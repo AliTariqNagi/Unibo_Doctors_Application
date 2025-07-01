@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Image Ratings Excel from JSON</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%; /* Make container wider for data display */
+            max-width: 800px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px; /* Add margin below button */
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #28a745; /* Green for success */
+        }
+        .error {
+            color: #dc3545; /* Red for error */
+        }
+    </style>
+    <!-- Include SheetJS library from CDN for Excel generation -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Download Doctor Image Ratings (Excel from JSON)</h1>
+        <button id="downloadExcelBtn">Download Excel File</button>
+        <div id="statusMessage" class="message"></div>
+    </div>
+
+    <script>
+        // IMPORTANT: Ensure this URL matches where your FastAPI backend is running
+        const backendUrl = "https://medicalimages.apice.unibo.it"; 
+        const downloadExcelBtn = document.getElementById("downloadExcelBtn"); // Renamed button ID
+        const statusMessage = document.getElementById("statusMessage");
+
+        downloadExcelBtn.addEventListener("click", async () => {
+            statusMessage.textContent = "Fetching data and preparing Excel...";
+            statusMessage.className = "message"; // Reset to default message style
+
+            try {
+                const response = await fetch(`${backendUrl}/get_excel_data_categorized_doctor_skin_disease_crops_rating_batch/`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                // Parse the response as JSON (as the backend route returns JSON)
+                const jsonData = await response.json();
+                
+                if (jsonData.length === 0) {
+                    statusMessage.textContent = "No data found to download.";
+                    statusMessage.className = "message error";
+                    return;
+                }
+
+                // --- Convert JSON to Excel using SheetJS ---
+                // Create a new worksheet from JSON data
+                const ws = XLSX.utils.json_to_sheet(jsonData);
+
+                // Create a new workbook
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "ImageRatings"); // Add the worksheet to the workbook
+
+                // Write the workbook to a binary string
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+
+                // Function to convert binary string to ArrayBuffer
+                function s2ab(s) {
+                    const buf = new ArrayBuffer(s.length);
+                    const view = new Uint8Array(buf);
+                    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                    return buf;
+                }
+
+                // Create a Blob from the ArrayBuffer
+                const blob = new Blob([s2ab(wbout)], { type: "application/octet-stream" });
+
+                // Create a URL for the Blob and trigger download
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'crop_image_ratings.xlsx'; // Suggested filename for download
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url); // Clean up the URL object
+
+                statusMessage.textContent = "Excel file downloaded successfully!";
+
+            } catch (error) {
+                console.error("Download failed:", error);
+                statusMessage.textContent = `Download failed: ${error.message}`;
+                statusMessage.className = "message error"; // Apply error style
+            }
+        });
+    </script>
+</body>
+</html>

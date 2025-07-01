@@ -1468,6 +1468,410 @@ async def create_new_categorization(
     return new_db_entry
 
 
+from app.schemas import BatchCropImageRatingRequest, CropImageMetadata
+from app.models import CropImageRating
+from sqlalchemy.exc import IntegrityError
+
+# @app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
+# async def get_crop_images_for_validation(
+#     offset: int = 0,
+#     limit: int = 15,
+#     db: Session = Depends(get_db)
+# ):
+#     all_image_filenames = [f for f in os.listdir(CROP_IMAGES_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+#     all_image_filenames.sort()
+
+#     # Get paths of images already rated from the NEW table name
+#     validated_image_paths = db.query(CropImageRating.image_path).all() # <--- CHANGED MODEL HERE
+#     validated_image_paths_set = {path[0] for path in validated_image_paths}
+
+#     unvalidated_image_filenames = [
+#         f for f in all_image_filenames
+#         if f"/image/classify_skin_disease_crops_images/{f}" not in validated_image_paths_set
+#     ]
+
+#     batch_filenames = unvalidated_image_filenames[offset : offset + limit]
+
+#     image_metadata_list = [
+#         CropImageMetadata(image_path=f"/image/classify_skin_disease_crops_images/{filename}")
+#         for filename in batch_filenames
+#     ]
+
+#     return image_metadata_list
+
+
+
+# @app.post("/submit_crop_validations/", status_code=status.HTTP_201_CREATED)
+# async def submit_crop_validations(
+#     batch_data: BatchCropImageRatingRequest, # <--- CHANGED SCHEMA HERE
+#     db: Session = Depends(get_db)
+# ):
+#     new_entries = []
+#     for rating_data in batch_data.validations: # Renamed loop variable for clarity
+#         try:
+#             # Check if an entry for this image_path already exists in the NEW table name
+#             existing_entry = db.query(CropImageRating).filter( # <--- CHANGED MODEL HERE
+#                 CropImageRating.image_path == rating_data.image_path
+#             ).first()
+
+#             if existing_entry:
+#                 print(f"Warning: Rating for {rating_data.image_path} already exists. Skipping or updating.")
+#                 continue
+
+#             new_entry = CropImageRating( # <--- CHANGED MODEL HERE
+#                 image_path=rating_data.image_path,
+#                 doctor_name=rating_data.doctor_name,
+#                 comments=rating_data.comments,
+#                 crop_quality_rating=rating_data.crop_quality_rating,
+#                 crop_diagnosis=rating_data.crop_diagnosis,
+#             )
+#             db.add(new_entry)
+#             new_entries.append(new_entry)
+
+#         except IntegrityError:
+#             db.rollback()
+#             raise HTTPException(
+#                 status_code=status.HTTP_409_CONFLICT,
+#                 detail=f"Rating for image {rating_data.image_path} already exists."
+#             )
+#         except Exception as e:
+#             db.rollback()
+#             raise HTTPException(
+#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#                 detail=f"Error processing rating for {rating_data.image_path}: {str(e)}"
+#             )
+
+#     db.commit()
+#     for entry in new_entries:
+#         db.refresh(entry)
+
+#     return {"message": f"Successfully processed {len(new_entries)} ratings."}
+
+# Directory containing the original unvalidated crop images
+CROP_IMAGES_SOURCE_DIR = os.path.join("images", "classify_skin_disease_crops_images")
+
+# New directory where categorized crop images will be moved
+CATEGORIZED_CROP_IMAGES_DIR = os.path.join(CROP_IMAGES_SOURCE_DIR, "categorized")
+
+# Ensure the necessary directories exist
+os.makedirs(CROP_IMAGES_SOURCE_DIR, exist_ok=True)
+os.makedirs(CATEGORIZED_CROP_IMAGES_DIR, exist_ok=True)
+
+
+def get_unique_filename(directory: str, original_filename: str) -> str:
+    """
+    Generates a unique filename in the given directory by appending a numerical suffix
+    if a file with the original_filename already exists.
+    e.g., 'image.jpg' -> 'image_1.jpg' -> 'image_2.jpg'
+    """
+    name, ext = os.path.splitext(original_filename)
+    counter = 1
+    new_filename = original_filename
+    while os.path.exists(os.path.join(directory, new_filename)):
+        new_filename = f"{name}_{counter}{ext}"
+        counter += 1
+    return new_filename
+
+
+# Route to get a batch of RANDOM crop image paths for validation
+@app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
+async def get_crop_images_for_validation(
+    limit: int = 15,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetches a batch of RANDOM crop image paths that have NOT yet been
+    validated (i.e., not in the crop_image_rating table).
+    """
+    all_image_filenames = [
+        f for f in os.listdir(CROP_IMAGES_SOURCE_DIR)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
+           os.path.isfile(os.path.join(CROP_IMAGES_SOURCE_DIR, f))
+    ]
+    all_image_filenames.sort()
+
+    rated_image_urls = db.query(CropImageRating.image_path).all()
+    rated_image_urls_set = {url[0] for url in rated_image_urls}
+
+    unrated_image_filenames = []
+    for filename in all_image_filenames:
+        full_image_url_path = f"/images/classify_skin_disease_crops_images/{filename}"
+        if full_image_url_path not in rated_image_urls_set:
+            unrated_image_filenames.append(filename)
+
+    random_batch_filenames = random.sample(unrated_image_filenames, min(limit, len(unrated_image_filenames)))
+
+    image_metadata_list = [
+        CropImageMetadata(image_path=f"/images/classify_skin_disease_crops_images/{filename}")
+        for filename in random_batch_filenames
+    ]
+
+    return image_metadata_list
+
+# Route to submit a batch of crop image rating data and move the files
+@app.post("/submit_crop_validations/", status_code=status.HTTP_201_CREATED)
+async def submit_crop_validations(
+    batch_data: BatchCropImageRatingRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Receives a batch of crop image rating data, stores it in the database,
+    and moves the physically rated image files to the categorized directory,
+    handling filename conflicts.
+    """
+    new_db_entries_count = 0
+    moved_files_count = 0
+    errors = []
+
+    for rating_data in batch_data.validations:
+        try:
+            # 1. Check if an entry for this image_path already exists in the database
+            existing_entry = db.query(CropImageRating).filter(
+                CropImageRating.image_path == rating_data.image_path
+            ).first()
+
+            if existing_entry:
+                print(f"Warning: Rating for {rating_data.image_path} already exists. Skipping database entry and file move.")
+                continue
+
+            # 2. Create new database entry
+            new_entry = CropImageRating(
+                image_path=rating_data.image_path,
+                doctor_name=rating_data.doctor_name,
+                comments=rating_data.comments,
+                crop_quality_rating=rating_data.crop_quality_rating,
+                crop_diagnosis=rating_data.crop_diagnosis,
+            )
+            db.add(new_entry)
+            new_db_entries_count += 1
+
+            # 3. Move the physical image file
+            relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
+            source_file_abs_path = os.path.join("images", relative_file_path_from_base_static)
+
+            if not os.path.exists(source_file_abs_path):
+                print(f"File not found for moving: {source_file_abs_path}. Skipping file move.")
+                errors.append(f"File not found for {rating_data.image_path}. (DB entry added)")
+                continue # Do not attempt to move if source file doesn't exist
+
+            # --- Apply unique filename logic here ---
+            original_basename = os.path.basename(source_file_abs_path)
+            unique_filename_for_destination = get_unique_filename(CATEGORIZED_CROP_IMAGES_DIR, original_basename)
+            destination_file_abs_path = os.path.join(CATEGORIZED_CROP_IMAGES_DIR, unique_filename_for_destination)
+
+            shutil.move(source_file_abs_path, destination_file_abs_path)
+            moved_files_count += 1
+            print(f"DEBUG: Moved {source_file_abs_path} to {destination_file_abs_path}")
+
+        except IntegrityError:
+            db.rollback()
+            errors.append(f"Duplicate entry for image {rating_data.image_path}. This image might have been processed concurrently.")
+            print(f"Error: IntegrityError for {rating_data.image_path}. Rolled back.")
+        except FileNotFoundError as e:
+            db.rollback()
+            errors.append(f"File system error (file not found/permissions) for {rating_data.image_path}: {str(e)}")
+            print(f"Error: FileNotFoundError for {rating_data.image_path}: {str(e)}. Rolled back.")
+        except Exception as e:
+            db.rollback()
+            errors.append(f"Unexpected error processing {rating_data.image_path}: {str(e)}")
+            print(f"Error: Unexpected exception for {rating_data.image_path}: {str(e)}. Rolled back.")
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        errors.append(f"Final database commit failed: {str(e)}")
+        print(f"Error: Final DB commit failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to commit some data: {'; '.join(errors) if errors else 'Unknown error'}"
+        )
+
+    message = f"Successfully processed {new_db_entries_count} ratings. {moved_files_count} files moved."
+    if errors:
+        message += f" Some issues occurred: {', '.join(errors)}"
+        raise HTTPException(
+            status_code=status.HTTP_207_MULTI_STATUS,
+            detail={"message": message, "errors": errors}
+        )
+
+    return {"message": message}
+
+
+@app.get("/get_excel_data_categorized_doctor_skin_disease_crops_rating_batch/")
+def get_categorized_excel_data(db: Session = Depends(get_db)):
+    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    images = db.query(CropImageRating).all()
+    if not images:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
+
+    # Use only defined column names for DoctorImageValidation
+    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    column_names = [column.name for column in CropImageRating.__table__.columns]
+    data = []
+    for image in images:
+        row_data = {}
+        for col_name in column_names:
+            value = getattr(image, col_name)
+            if isinstance(value, datetime):
+                row_data[col_name] = value.isoformat()
+            else:
+                row_data[col_name] = value
+        data.append(row_data)
+
+    return JSONResponse(content=data)
+
+
+from app.schemas import SingleCropImageMetadata, SingleCropQualityRatingRequest
+
+STATIC_DIR = "images"
+
+# Directory for images to be rated by crop quality (new source for this task)
+CROP_QUALITY_RATING_SOURCE_DIR = os.path.join(STATIC_DIR, "crop_quality_rating_images")
+
+# Destination directory for images after they are rated by crop quality
+CROP_QUALITY_RATING_CHECKED_DIR = os.path.join(CROP_QUALITY_RATING_SOURCE_DIR, "checked")
+
+# Existing directory for batch image validation (from previous task)
+CROP_IMAGES_SOURCE_DIR = os.path.join(STATIC_DIR, "classify_skin_disease_crops_images")
+CATEGORIZED_CROP_IMAGES_DIR = os.path.join(CROP_IMAGES_SOURCE_DIR, "categorized")
+
+
+# Ensure directories exist
+os.makedirs(CROP_QUALITY_RATING_SOURCE_DIR, exist_ok=True)
+os.makedirs(CROP_QUALITY_RATING_CHECKED_DIR, exist_ok=True)
+
+# --- ROUTE: Get a single random unrated image for crop quality rating ---
+@app.get("/get_next_crop_quality_rating_image/", response_model=Optional[SingleCropImageMetadata])
+async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
+    """
+    Fetches a single random image path from 'crop_quality_rating_images' that
+    has not yet been rated in the 'crop_image_quality_rating' table.
+    """
+    all_image_filenames = [
+        f for f in os.listdir(CROP_QUALITY_RATING_SOURCE_DIR)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
+           os.path.isfile(os.path.join(CROP_QUALITY_RATING_SOURCE_DIR, f))
+    ]
+    all_image_filenames.sort()
+
+    # Query the NEW table name: models.CropImageQualityRating
+    rated_image_urls = db.query(CropImageQualityRating.image_path).filter(
+        CropImageQualityRating.image_path.like(f"/images/crop_quality_rating_images/%")
+    ).all()
+    rated_image_urls_set = {url[0] for url in rated_image_urls}
+
+    unrated_image_filenames = []
+    for filename in all_image_filenames:
+        full_image_url_path = f"/images/crop_quality_rating_images/{filename}"
+        if full_image_url_path not in rated_image_urls_set:
+            unrated_image_filenames.append(filename)
+
+    if not unrated_image_filenames:
+        return None # No more unrated images
+
+    random_filename = random.choice(unrated_image_filenames)
+    image_path_for_response = f"/images/crop_quality_rating_images/{random_filename}"
+
+    return SingleCropImageMetadata(image_path=image_path_for_response)
+
+
+# --- ROUTE: Submit a single crop quality rating and move the file ---
+@app.post("/submit_crop_quality_rating/", status_code=status.HTTP_201_CREATED)
+async def submit_crop_quality_rating(
+    rating_data: SingleCropQualityRatingRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Receives a single crop image quality rating, stores it in the database,
+    and moves the physically rated image file to the 'checked' directory.
+    """
+    try:
+        # Query the NEW table name: models.CropImageQualityRating
+        existing_entry = db.query(CropImageQualityRating).filter(
+            CropImageQualityRating.image_path == rating_data.image_path
+        ).first()
+
+        if existing_entry:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Image {rating_data.image_path} has already been rated."
+            )
+
+        # Create new database entry using the NEW model: models.CropImageQualityRating
+        new_entry = CropImageQualityRating(
+            image_path=rating_data.image_path,
+            doctor_name=rating_data.doctor_name,
+            comments=rating_data.comments,
+            crop_quality_rating=rating_data.crop_quality_rating,
+
+        )
+        db.add(new_entry)
+        db.commit() # Commit immediately for single entry
+        db.refresh(new_entry)
+
+        relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
+        source_file_abs_path = os.path.join(STATIC_DIR, relative_file_path_from_base_static)
+
+        if not os.path.exists(source_file_abs_path):
+            print(f"File not found for moving: {source_file_abs_path}. DB entry created, but file not moved.")
+            return {"message": f"Rating saved, but file {os.path.basename(source_file_abs_path)} not found for moving."}
+
+        original_basename = os.path.basename(source_file_abs_path)
+        unique_filename_for_destination = get_unique_filename(CROP_QUALITY_RATING_CHECKED_DIR, original_basename)
+        destination_file_abs_path = os.path.join(CROP_QUALITY_RATING_CHECKED_DIR, unique_filename_for_destination)
+
+        shutil.move(source_file_abs_path, destination_file_abs_path)
+        print(f"DEBUG: Moved {source_file_abs_path} to {destination_file_abs_path}")
+
+        return {"message": "Rating submitted and image moved successfully!"}
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Rating for image {rating_data.image_path} already exists. Cannot re-rate."
+        )
+    except FileNotFoundError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File system error (file not found/permissions) for {rating_data.image_path}: {str(e)}"
+        )
+    except Exception as e:
+        db.rollback()
+        print(f"Error processing rating for {rating_data.image_path}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error processing rating for {rating_data.image_path}: {str(e)}"
+        )
+
+from app.models import CropImageQualityRating
+
+
+@app.get("/get_excel_data_categorized_doctor_skin_disease_crops_rating_single_image/")
+def get_categorized_excel_data(db: Session = Depends(get_db)):
+    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    images = db.query(CropImageQualityRating).all()
+    if not images:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
+
+    # Use only defined column names for DoctorImageValidation
+    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    column_names = [column.name for column in CropImageQualityRating.__table__.columns]
+    data = []
+    for image in images:
+        row_data = {}
+        for col_name in column_names:
+            value = getattr(image, col_name)
+            if isinstance(value, datetime):
+                row_data[col_name] = value.isoformat()
+            else:
+                row_data[col_name] = value
+        data.append(row_data)
+
+    return JSONResponse(content=data)
+
 if __name__ == "__main__":
     import uvicorn
     logging.basicConfig(level=logging.INFO)  # Configure logging

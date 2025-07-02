@@ -54,9 +54,34 @@ scp -r root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main 
 scp main.py root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/app/' 
 
 # Categorize Images
-categorize_images.html
-Source Images Directory: /images/categorized_images
-Target Images Directory: /images/categorized_images_crops_categorized
+## Frontend file: categorize_images.html
+## Source Images Directory: /images/categorized_images
+   Expect Images: {base_name}.jpg, {base_name}_mask.jpg, {base_name}_crop.jpg, {base_name}_crop_mask.jpg
+## Target Images Directory: /images/categorized_images_crops_categorized
+## Table Name: doctor_image_validation
+### Table Fields:
+#### id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String)
+    mask_path = Column(String)
+    crop_path = Column(String)            # New
+    crop_mask_path = Column(String)       # New
 
+    doctor_name = Column(String)
+    #rating = Column(Integer)
+    comments = Column(String)
+    mask_comments = Column(String)
+    disease_name = Column(String)
+    category = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+
+    #years_of_experience = Column(Integer)   
+    real_generated = Column(String)
+    realism_rating = Column(Integer)
+    image_precision = Column(String)
+    skin_color_precision = Column(Integer)
+    confidence_level = Column(Integer)
+    crop_quality_rating = Column(Integer)
+    crop_diagnosis = Column(String)
+    fitzpatrick_scale = Column(String)
 
 

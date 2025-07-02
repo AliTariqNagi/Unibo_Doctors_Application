@@ -129,3 +129,19 @@ scp main.py root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-
     created_at = Column(DateTime, server_default=func.now())
 
 
+# Skin Disease Crops Rating
+Get Random 15 files 
+## Frontend file: doctor_skin_disease_crops_rating.html
+## Source Images Directory: /images/classify_skin_disease_crops_images
+   Expect Images: {base_name}.jpg
+## Target Images Directory: /images/classify_skin_disease_crops_images/categorized
+## Table Name: crop_image_rating
+### Table Fields:
+#### 
+   id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String, unique=True, index=True)
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_quality_rating = Column(Integer)
+    crop_diagnosis = Column(String)
+    created_at = Column(DateTime, server_default=func.now())

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Uploader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        /* Style for the new select dropdown */
+        .form-group select {
+            width: calc(100% - 16px); /* Account for padding */
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background-color: #fff; /* Ensure white background */
+            cursor: pointer;
+        }
+        /* Hide the default file input */
+        .form-group input[type="file"] {
+            display: none; 
+        }
+        /* Style the label to look like a button */
+        .file-upload-button {
+            background-color: #e0e0e0; /* Neutral gray */
+            color: #333; /* Dark text for contrast */
+            padding: 12px 25px;
+            border: 1px solid #ccc; /* Add a border to define it */
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .file-upload-button:hover {
+            background-color: #d0d0d0; /* Slightly darker gray on hover */
+            border-color: #bbb;
+        }
+
+        button { /* This button is for the actual upload action */
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .message {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #28a745; /* Green for success */
+        }
+        .error {
+            color: #dc3545; /* Red for error */
+        }
+        .uploaded-files {
+            margin-top: 20px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        .uploaded-files h3 {
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .uploaded-files ul {
+            list-style: none;
+            padding: 0;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #f0f0f0;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .uploaded-files li {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+            color: #333;
+        }
+        .uploaded-files li:last-child {
+            border-bottom: none;
+        }
+        #selectedFilesDisplay { /* New element to show selected file names */
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+            text-align: left;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Images</h1>
+
+        <div class="form-group">
+            <label for="subdirectory">Upload to Subdirectory:</label>
+            <select id="subdirectory">
+                <option value="">-- Select or leave blank for root 'images' directory --</option>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Select Images:</label>
+            <!-- Hidden file input -->
+            <input type="file" id="imageUpload" accept="image/*" multiple>
+            <!-- Styled label that acts as the browse button -->
+            <label for="imageUpload" class="file-upload-button">Browse Files</label>
+            <!-- Display selected file names -->
+            <div id="selectedFilesDisplay">No files selected.</div>
+        </div>
+
+        <button id="uploadBtn" disabled>Upload Images</button>
+        
+        <div id="statusMessage" class="message"></div>
+
+        <div class="uploaded-files" style="display: none;">
+            <h3>Uploaded Files:</h3>
+            <ul id="uploadedFilesList"></ul>
+        </div>
+    </div>
+
+    <script>
+        const backendUrl = "https://medicalimages.apice.unibo.it"; // Your FastAPI backend URL
+
+        const subdirectorySelect = document.getElementById("subdirectory"); // Changed to select
+        const imageUploadInput = document.getElementById("imageUpload");
+        const uploadBtn = document.getElementById("uploadBtn");
+        const statusMessage = document.getElementById("statusMessage");
+        const uploadedFilesList = document.getElementById("uploadedFilesList");
+        const uploadedFilesContainer = document.querySelector(".uploaded-files");
+        const selectedFilesDisplay = document.getElementById("selectedFilesDisplay");
+
+        // Function to fetch subdirectories and populate the dropdown
+        async function fetchSubdirectories() {
+            try {
+                const response = await fetch(`${backendUrl}/get_image_subdirectories/`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                const subdirectories = await response.json();
+
+                // Clear existing options, keep the default one
+                subdirectorySelect.innerHTML = '<option value="">-- Select or leave blank for root \'images\' directory --</option>';
+                
+                subdirectories.forEach(dir => {
+                    const option = document.createElement("option");
+                    option.value = dir;
+                    option.textContent = dir;
+                    subdirectorySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error fetching subdirectories:", error);
+                statusMessage.textContent = `Failed to load subdirectories: ${error.message}`;
+                statusMessage.classList.add("error");
+            }
+        }
+
+        // Call fetchSubdirectories on page load
+        fetchSubdirectories();
+
+        // Enable/disable upload button based on file selection and display file names
+        imageUploadInput.addEventListener("change", () => {
+            const files = imageUploadInput.files;
+            uploadBtn.disabled = files.length === 0;
+            statusMessage.textContent = ""; // Clear status message on new file selection
+            uploadedFilesList.innerHTML = ""; // Clear previous list
+            uploadedFilesContainer.style.display = "none"; // Hide list
+
+            // Update selected files display
+            if (files.length > 0) {
+                let fileNames = Array.from(files).map(file => file.name).join(', ');
+                selectedFilesDisplay.textContent = `Selected: ${fileNames}`;
+            } else {
+                selectedFilesDisplay.textContent = "No files selected.";
+            }
+        });
+
+        uploadBtn.addEventListener("click", async () => {
+            const files = imageUploadInput.files;
+            if (files.length === 0) {
+                statusMessage.textContent = "Please select at least one image to upload.";
+                statusMessage.classList.add("error");
+                return;
+            }
+
+            statusMessage.textContent = "Uploading...";
+            statusMessage.classList.remove("error", "message");
+            uploadBtn.disabled = true; // Disable button during upload
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append("files", files[i]); // Append each file with the key "files"
+            }
+
+            const subdirectory = subdirectorySelect.value.trim(); // Get value from select
+            if (subdirectory) {
+                formData.append("subdirectory", subdirectory); // Add subdirectory if selected
+            }
+
+            try {
+                const response = await fetch(`${backendUrl}/upload_images/`, {
+                    method: "POST",
+                    body: formData, // FormData automatically sets Content-Type: multipart/form-data
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                statusMessage.textContent = result.message || "Upload successful!";
+                statusMessage.classList.add("message");
+
+                // Display uploaded file names
+                if (result.uploaded_files && result.uploaded_files.length > 0) {
+                    uploadedFilesList.innerHTML = ""; // Clear previous list
+                    result.uploaded_files.forEach(fileName => {
+                        const listItem = document.createElement("li");
+                        listItem.textContent = fileName;
+                        uploadedFilesList.appendChild(listItem);
+                    });
+                    uploadedFilesContainer.style.display = "block"; // Show list
+                } else {
+                    uploadedFilesContainer.style.display = "none"; // Hide list if no files returned
+                }
+
+                // Clear file input after successful upload
+                imageUploadInput.value = "";
+                uploadBtn.disabled = true; // Disable button again until new files are selected
+                selectedFilesDisplay.textContent = "No files selected."; // Reset selected files display
+                
+                // Re-fetch subdirectories to ensure the list is up-to-date if new folders were created
+                fetchSubdirectories(); 
+
+            } catch (error) {
+                console.error("Upload failed:", error);
+                statusMessage.textContent = `Upload failed: ${error.message}`;
+                statusMessage.classList.add("error");
+                uploadBtn.disabled = false; // Re-enable button on error
+                uploadedFilesContainer.style.display = "none"; // Hide list on error
+            }
+        });
+    </script>
+</body>
+</html>

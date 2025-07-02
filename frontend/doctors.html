@@ -135,19 +135,19 @@
                         <th>Email</th>
                         <th>Specialization</th>
                         <th>Registration ID</th>
+                        <th>Years of Experience</th>
                     </tr>
                 </thead>
                 <tbody id="doctors-table-body">
                     </tbody>
             </table>
         </div>
-        <div id="message-container" class="message-container">Loading doctors data...</div>
     </div>
 
     <script>
         const doctorsTableBody = document.getElementById('doctors-table-body');
         const messageContainer = document.getElementById('message-container');
-        const backendUrl = 'http://localhost:8000';
+        const backendUrl = 'https://medicalimages.apice.unibo.it';
 
         async function fetchDoctors() {
             try {
@@ -158,7 +158,7 @@
                 const data = await response.json();
 
                 if (data.length > 0) {
-                    doctorsTableBody.innerHTML = ''; // Clear loading message
+                    doctorsTableBody.innerHTML = ''; 
                     data.forEach(doctor => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
@@ -169,6 +169,7 @@
                             <td data-label="Email">${doctor.email || '-'}</td>
                             <td data-label="Specialization">${doctor.specialization || '-'}</td>
                             <td data-label="Registration ID">${doctor.registration_id}</td>
+                            <td data-label="Years of Experience">${doctor.years_of_experience || '-'}</td>
                         `;
                         doctorsTableBody.appendChild(row);
                     });

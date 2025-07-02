@@ -85,3 +85,30 @@ scp main.py root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-
     fitzpatrick_scale = Column(String)
 
 
+
+# Download Initial Excel
+## Frontend file: download_categorized_excel.html
+## Table Name: doctor_image_validation
+
+
+# View/Edit Images Details
+## Creates new entries in the tables for the modifications
+## Frontend file: view_edit_images.html
+## Table Name: doctor_image_validation
+
+# Categorize Images Crops
+## Frontend file: categorized_images_crops_batch.html
+## Source Images Directory: /images/categorize_images_crops/ 
+### Get 15 files from this directory
+   Expect Images: {base_name}.jpg
+## Target Images Directory: /images/categorized_images_crops_categorized/
+## Table Name: crop_image_validation
+### Table Fields:
+####     
+    id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String) # Path to the categorized crop image
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_diagnosis = Column(String)
+    fitzpatrick_scale = Column(String)
+    created_at = Column(DateTime, server_default=func.now())

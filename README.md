@@ -194,3 +194,72 @@ Get Random 15 files
     created_at = Column(DateTime, server_default=func.now())
 
 
+# Classify Skin Tone
+## Frontend file: classify_skin_tone.html
+## Source Images Directory: NA (Table Name: skin_disease_image)
+## Target Images Directory: NA
+## Table Name: skin_disease_image
+### Table Fields:
+#### 
+id = Column(Integer, primary_key=True, index=True)
+    disease_name_amended = Column(String, index=True)
+    disease_name = Column(String, index=True)
+    persona_digits = Column(String, index=True)
+    example_digit = Column(String, index=True)
+    image_name = Column(String, nullable=False)
+    mask_name = Column(String)  # Can be NULL if no mask
+    image_path = Column(String, nullable=False)
+    mask_path = Column(String)
+    crop_image_name = Column(String)
+    crop_image_path = Column(String)
+    crop_mask_name = Column(String)
+    crop_mask_path = Column(String)
+    doctor_name = Column(String)
+    rating = Column(Integer)
+    comments = Column(String)
+    category = Column(String)
+    years_of_experience = Column(Integer)
+    real_generated = Column(String)
+    realism_rating = Column(Integer)
+    image_precision = Column(String)
+    skin_color_precision = Column(Integer)
+    confidence_level = Column(Integer)
+    crop_quality_rating = Column(Integer)
+    crop_diagnosis = Column(String)
+    fitzpatrick_scale = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+
+# Download Excel Classify Skin Tone
+## Frontend file: download_skin_disease_excel_classify_skin_tone.html
+## Table Name: skin_disease_image
+### Table Fields:
+#### 
+id = Column(Integer, primary_key=True, index=True)
+    disease_name_amended = Column(String, index=True)
+    disease_name = Column(String, index=True)
+    persona_digits = Column(String, index=True)
+    example_digit = Column(String, index=True)
+    image_name = Column(String, nullable=False)
+    mask_name = Column(String)  # Can be NULL if no mask
+    image_path = Column(String, nullable=False)
+    mask_path = Column(String)
+    crop_image_name = Column(String)
+    crop_image_path = Column(String)
+    crop_mask_name = Column(String)
+    crop_mask_path = Column(String)
+    doctor_name = Column(String)
+    rating = Column(Integer)
+    comments = Column(String)
+    category = Column(String)
+    years_of_experience = Column(Integer)
+    real_generated = Column(String)
+    realism_rating = Column(Integer)
+    image_precision = Column(String)
+    skin_color_precision = Column(Integer)
+    confidence_level = Column(Integer)
+    crop_quality_rating = Column(Integer)
+    crop_diagnosis = Column(String)
+    fitzpatrick_scale = Column(String)
+    created_at = Column(DateTime, server_default=func.now())

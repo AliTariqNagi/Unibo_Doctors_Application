@@ -196,9 +196,18 @@ Get Random 15 files
 
 # Classify Skin Tone
 ## Frontend file: classify_skin_tone.html
-## Source Images Directory: NA (Table Name: skin_disease_image)
-## Target Images Directory: NA
+## Source Images Directory: "/root/test_data"
+## Target Images Directory: "/root/test_data"
 ## Table Name: skin_disease_image
+## How to populate the DB Table 
+#### Route: /populate_database/, hierarchy: /root/test_data/sub_source_directory/disease_directory/persona_dir/example_dir/filename
+###### 
+                        relative_path = os.path.join(amended_dir, disease_dir, persona_dir, example_dir, filename)
+                        full_path = os.path.join(image_root, relative_path)
+
+######            /populate_crops_single_table/ 
+                hierarchy: /root/test_data/sub_source_directory/disease_directory/persona_dir/example_dir/filename
+
 ### Table Fields:
 #### 
 id = Column(Integer, primary_key=True, index=True)

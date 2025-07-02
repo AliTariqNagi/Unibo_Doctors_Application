@@ -53,4 +53,10 @@ scp -r root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main 
 # Uploading files to the directory
 scp main.py root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/app/' 
 
+# Categorize Images
+categorize_images.html
+Source Images Directory: /images/categorized_images
+Target Images Directory: /images/categorized_images_crops_categorized
+
+
 

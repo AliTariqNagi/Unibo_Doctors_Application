@@ -1277,12 +1277,17 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-IMAGE_DIR = "images/categorized_images"  # path to your images folder
+IMAGE_DIR = "/images/categorized_images"  # path to your images folder
+
+STATIC_DIR = "images"
+IMAGE_NAMES_DIR = os.path.join(STATIC_DIR, "categorized_images")
+os.makedirs(IMAGE_NAMES_DIR, exist_ok=True) # Ensure the new directory exists
+
 
 @app.get("/get_all_base_names")
 async def get_all_base_names():
     try:
-        files = os.listdir(IMAGE_DIR)
+        files = os.listdir(IMAGE_NAMES_DIR)
         # Collect all filenames without extensions for jpg and png separately
         jpg_files = set(f for f in files if f.endswith(".jpg"))
         png_files = set(f for f in files if f.endswith(".png"))

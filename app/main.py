@@ -1232,10 +1232,10 @@ def submit_validation(
 
     # Construct the URL paths to be stored in the database
     # These paths are relative to the `/images/` FastAPI mount point
-    image_db_path = f"/images/categorized_images/{image_new_filename}"
-    mask_db_path = f"/images/categorized_images/{mask_new_filename}" if mask_new_filename else None
-    crop_db_path = f"/images/categorized_images/{crop_new_filename}" if crop_new_filename else None
-    crop_mask_db_path = f"/images/categorized_images/{crop_mask_new_filename}" if crop_mask_new_filename else None
+    image_db_path = f"/images/categorized_images_crops_categorized/{image_new_filename}"
+    mask_db_path = f"/images/categorized_images_crops_categorized/{mask_new_filename}" if mask_new_filename else None
+    crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
+    crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
 
     # Save to DB
     db_record = DoctorImageValidation(

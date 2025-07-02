@@ -99,6 +99,7 @@ scp main.py root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-
 # Categorize Images Crops
 ## Frontend file: categorized_images_crops_batch.html
 ## Source Images Directory: /images/categorize_images_crops/ 
+## Target Directory: /images/categorized_images_crops_categorized
 ### Get 15 files from this directory
    Expect Images: {base_name}.jpg
 ## Target Images Directory: /images/categorized_images_crops_categorized/
@@ -112,3 +113,19 @@ scp main.py root@192.168.15.7:'/root/Unibo_Doctor_App/Unibo_Doctors_Application-
     crop_diagnosis = Column(String)
     fitzpatrick_scale = Column(String)
     created_at = Column(DateTime, server_default=func.now())
+
+
+# Download Categorize Images Crops
+## Frontend file: download_categorized_images_crops_batch.html
+## Table Name: crop_image_validation
+### Table Fields:
+####     
+    id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String) # Path to the categorized crop image
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_diagnosis = Column(String)
+    fitzpatrick_scale = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+
+

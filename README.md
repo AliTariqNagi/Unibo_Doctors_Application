@@ -145,3 +145,20 @@ Get Random 15 files
     crop_quality_rating = Column(Integer)
     crop_diagnosis = Column(String)
     created_at = Column(DateTime, server_default=func.now())
+
+
+
+# Download Excel Skin Disease Crops Rating
+## Frontend file: doctor_skin_disease_crops_rating_download_excel.html
+## Table Name: crop_image_rating
+### Table Fields:
+#### 
+   id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String, unique=True, index=True)
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_quality_rating = Column(Integer)
+    crop_diagnosis = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+
+

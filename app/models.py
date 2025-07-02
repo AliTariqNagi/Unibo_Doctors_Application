@@ -44,7 +44,7 @@ class DoctorImageValidation(Base):
     crop_mask_path = Column(String)       # New
 
     doctor_name = Column(String)
-    rating = Column(Integer)
+    #rating = Column(Integer)
     comments = Column(String)
     mask_comments = Column(String)
     disease_name = Column(String)
@@ -111,6 +111,28 @@ class CropImageValidation(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+
+class CropImageRating(Base): # Class name remains CropImageRating
+    __tablename__ = "crop_image_rating" # <--- CHANGED THIS LINE
+
+    id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String, unique=True, index=True)
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_quality_rating = Column(Integer)
+    crop_diagnosis = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class CropImageQualityRating(Base): # Class name remains CropImageRating
+    __tablename__ = "crop_image_quality_rating" # <--- CHANGED THIS LINE
+
+    id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String, unique=True, index=True)
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_quality_rating = Column(Integer)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 # Create the database tables

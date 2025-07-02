@@ -16,7 +16,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.models import SkinDiseaseImage, SessionLocal, engine, Base, CropImageValidation
-from app.schemas import SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse # Create a new schema
+from app.schemas import SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse, PatientImageMetadata, \
+    SkinToneClassificationResponse, SkinToneClassificationRequest # Create a new schema
 from typing import Optional, List
 import re
 from app.schemas import DoctorImageValidationUpdateRequest
@@ -705,29 +706,191 @@ async def get_skin_disease_image(image_id: int, db: Session = Depends(get_db)):
     return image
 
 
-# --- Routes for skin tone classification ---
-@app.get("/patient_images/{persona_digits}", response_model=List[SkinDiseaseImageResponse])
-async def get_patient_images_for_classification(persona_digits: str, db: Session = Depends(get_db)):
-    images = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.persona_digits == persona_digits).all()
-    if not images:
-        raise HTTPException(status_code=404, detail=f"No images found for patient {persona_digits}")
-    return images
+# # --- Routes for skin tone classification ---
+# @app.get("/patient_images/{persona_digits}", response_model=List[SkinDiseaseImageResponse])
+# async def get_patient_images_for_classification(persona_digits: str, db: Session = Depends(get_db)):
+#     images = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.persona_digits == persona_digits).all()
+#     if not images:
+#         raise HTTPException(status_code=404, detail=f"No images found for patient {persona_digits}")
+#     return images
 
-@app.post("/classify_skin_tone/{persona_digits}")
-async def classify_skin_tone(persona_digits: str, fitzpatrick_scale: str = Form(...), db: Session = Depends(get_db)):
-    images = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.persona_digits == persona_digits).all()
-    if not images:
-        raise HTTPException(status_code=404, detail=f"No images found for patient {persona_digits}")
-    for image in images:
-        image.fitzpatrick_scale = fitzpatrick_scale
-    db.commit()
-    return {"message": f"Skin tone for patient {persona_digits} classified as {fitzpatrick_scale}."}
+# @app.post("/classify_skin_tone/{persona_digits}")
+# async def classify_skin_tone(persona_digits: str, fitzpatrick_scale: str = Form(...), db: Session = Depends(get_db)):
+#     images = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.persona_digits == persona_digits).all()
+#     if not images:
+#         raise HTTPException(status_code=404, detail=f"No images found for patient {persona_digits}")
+#     for image in images:
+#         image.fitzpatrick_scale = fitzpatrick_scale
+#     db.commit()
+#     return {"message": f"Skin tone for patient {persona_digits} classified as {fitzpatrick_scale}."}
 
 # --- (Optional) Route to get unique persona digits for classification UI ---
 @app.get("/unique_patients/", response_model=List[str])
 async def get_unique_patients(db: Session = Depends(get_db)):
     unique_personas = db.query(SkinDiseaseImage.persona_digits).distinct().all()
     return [persona[0] for persona in unique_personas if persona[0] is not None]
+
+from app.schemas import PatientImageMetadata
+
+# --- NEW ROUTE: Get Images for a Specific Patient ID ---
+@app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
+async def get_patient_images(persona_digits: str, db: Session = Depends(get_db)): # Added db dependency
+    """
+    Retrieves all image and mask paths for a given patient ID (persona_digits) from the database.
+    """
+    # Query SkinDiseaseImage table for all images associated with this persona_digits
+    images_from_db = db.query(SkinDiseaseImage).filter(
+        SkinDiseaseImage.persona_digits == persona_digits
+    ).all()
+
+    if not images_from_db:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient in the database.")
+
+    images_data = []
+    for img_entry in images_from_db:
+        images_data.append(PatientImageMetadata(
+            image_path=img_entry.image_path, # Assuming this is a full URL path like /images/... or /skin_disease_data/...
+            image_name=img_entry.image_name,
+            mask_path=img_entry.mask_path,
+            mask_name=img_entry.mask_name
+        ))
+    
+    # Sort the images for consistent display, e.g., by image_name
+    images_data.sort(key=lambda x: x.image_name) 
+    
+    return images_data
+
+
+from app.schemas import SkinToneClassificationRequest, SkinToneClassificationResponse
+from http import HTTPStatus
+
+# --- UPDATED ROUTE: Classify Skin Tone (Implements Conditional SkinDiseaseImage Update/Create) ---
+@app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
+async def classify_skin_tone(
+    persona_digits: str,
+    classification_data: SkinToneClassificationRequest, # Expecting JSON body from frontend
+    db: Session = Depends(get_db)
+):
+    """
+    Classifies the skin tone for a given patient (persona_digits) by a specific doctor.
+    - Always creates a new entry in SkinToneClassification (logging each classification event).
+    - Conditionally updates or creates entries in SkinDiseaseImage based on existing doctor_name.
+    - No image directory is moved.
+    """
+    try:
+        # Fetch the first SkinDiseaseImage entry for this persona_digits to get image/mask/crop paths
+        # This assumes that if a patient has multiple images, picking the first one is acceptable
+        # for logging in SkinToneClassification.
+        # first_image_entry = db.query(models.SkinDiseaseImage).filter(
+        #     models.SkinDiseaseImage.persona_digits == persona_digits
+        # ).first()
+
+        # image_name_log = None
+        # image_path_log = None
+        # mask_name_log = None
+        # mask_path_log = None
+        # crop_image_name_log = None
+        # crop_image_path_log = None
+        # crop_mask_name_log = None
+        # crop_mask_path_log = None
+
+        # if first_image_entry:
+        #     image_name_log = first_image_entry.image_name
+        #     image_path_log = first_image_entry.image_path
+        #     mask_name_log = first_image_entry.mask_name
+        #     mask_path_log = first_image_entry.mask_path
+        #     crop_image_name_log = first_image_entry.crop_image_name
+        #     crop_image_path_log = first_image_entry.crop_image_path
+        #     crop_mask_name_log = first_image_entry.crop_mask_name
+        #     crop_mask_path_log = first_image_entry.crop_mask_path
+        # else:
+        #     print(f"Warning: No SkinDiseaseImage entry found for persona_digits {persona_digits}. "
+        #           "Image/mask/crop paths in SkinToneClassification will be null.")
+
+
+        # # 1. Always create a new entry in SkinToneClassification
+        # new_classification = models.SkinToneClassification(
+        #     persona_digits=persona_digits,
+        #     doctor_name=classification_data.doctor_name,
+        #     fitzpatrick_scale=classification_data.fitzpatrick_scale,
+        #     image_name=image_name_log, # Populating new fields
+        #     image_path=image_path_log,
+        #     mask_name=mask_name_log,
+        #     mask_path=mask_path_log,
+        #     crop_image_name=crop_image_name_log,
+        #     crop_image_path=crop_image_path_log,
+        #     crop_mask_name=crop_mask_name_log,
+        #     crop_mask_path=crop_mask_path_log
+        # )
+        # db.add(new_classification)
+        message_part_1 = f"New classification recorded for patient {persona_digits} by doctor {classification_data.doctor_name}."
+
+        # 2. Conditionally update or create entries in SkinDiseaseImage
+        skin_disease_images = db.query(SkinDiseaseImage).filter(
+            SkinDiseaseImage.persona_digits == persona_digits
+        ).all()
+
+        # if not skin_disease_images:
+        #     print(f"Warning: No SkinDiseaseImage entries found for persona_digits {persona_digits}. "
+        #           "No SkinDiseaseImage records to update/create.")
+        #     db.commit() # Commit the SkinToneClassification log entry
+        #     return {"message": f"{message_part_1} No associated image records found to update/create."}
+
+        for image_entry in skin_disease_images:
+            # Check if doctor_name field is NULL or empty
+            if image_entry.doctor_name is None or image_entry.doctor_name == "":
+                # Condition 1: Doctor name is not set, so UPDATE the existing entry
+                image_entry.doctor_name = classification_data.doctor_name
+                image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
+                # SQLAlchemy automatically tracks changes to managed objects for updates
+                print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
+            else:
+                # Condition 2: Doctor name is already set, so CREATE a new entry
+                new_skin_disease_image_entry = SkinDiseaseImage(
+                    disease_name_amended=image_entry.disease_name_amended,
+                    disease_name=image_entry.disease_name,
+                    persona_digits=image_entry.persona_digits,
+                    example_digit=image_entry.example_digit,
+                    image_name=image_entry.image_name, # Same image name
+                    mask_name=image_entry.mask_name,
+                    image_path=image_entry.image_path, # Same image path
+                    mask_path=image_entry.mask_path,
+                    crop_image_name=image_entry.crop_image_name,
+                    crop_image_path=image_entry.crop_image_path,
+                    crop_mask_name=image_entry.crop_mask_name,
+                    crop_mask_path=image_entry.crop_mask_path,
+                    
+                    doctor_name=classification_data.doctor_name, # New doctor name
+                    fitzpatrick_scale=classification_data.fitzpatrick_scale, # New fitzpatrick scale
+                    # Other fields can be copied or left as default/null if not relevant to classification
+                    rating=image_entry.rating,
+                    comments=image_entry.comments,
+                    category=image_entry.category,
+                    years_of_experience=image_entry.years_of_experience,
+                    real_generated=image_entry.real_generated,
+                    realism_rating=image_entry.realism_rating,
+                    image_precision=image_entry.image_precision,
+                    skin_color_precision=image_entry.skin_color_precision,
+                    confidence_level=image_entry.confidence_level,
+                    crop_quality_rating=image_entry.crop_quality_rating,
+                    crop_diagnosis=image_entry.crop_diagnosis,
+                    created_at=datetime.now() # Set new creation timestamp
+                )
+                db.add(new_skin_disease_image_entry)
+                print(f"Created new SkinDiseaseImage entry for {image_entry.image_name} with ID {new_skin_disease_image_entry.id}")
+
+        db.commit() # Commit all changes (SkinToneClassification log and SkinDiseaseImage updates/creations)
+
+        return {"message": f"{message_part_1} Associated image records conditionally updated/created."}
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error classifying skin tone for {persona_digits}: {e}")
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during classification: {e}"
+        )
+    
 
 
 @app.get("/check_skin_disease_images/", response_model=List[SkinDiseaseImageResponse])
@@ -1871,6 +2034,83 @@ def get_categorized_excel_data(db: Session = Depends(get_db)):
         data.append(row_data)
 
     return JSONResponse(content=data)
+
+@app.get("/get_image_subdirectories/", response_model=List[str])
+async def get_image_subdirectories():
+    """
+    Returns a list of subdirectory names within the BASE_STATIC_DIR.
+    """
+    subdirectories = []
+    try:
+        # List all entries in the base static directory
+        for entry in os.listdir(STATIC_DIR):
+            full_path = os.path.join(STATIC_DIR, entry)
+            # Check if it's a directory and not a hidden directory (e.g., .git, .DS_Store)
+            if os.path.isdir(full_path) and not entry.startswith('.'):
+                subdirectories.append(entry)
+        subdirectories.sort() # Keep them sorted alphabetically
+    except Exception as e:
+        print(f"Error listing subdirectories: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve subdirectories.")
+    return subdirectories
+
+
+import os
+import shutil
+from typing import List, Optional
+from fastapi import UploadFile, File, Form, HTTPException, status
+from fastapi.responses import HTMLResponse # Ensure HTMLResponse is imported for the root route
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path # For robust path handling
+
+# --- EXISTING ROUTE: Handle Image Uploads ---
+@app.post("/upload_images/")
+async def upload_images(
+    files: List[UploadFile] = File(...), # List of uploaded files
+    subdirectory: Optional[str] = Form(None) # Optional subdirectory name from form data
+):
+    """
+    Uploads one or more image files to a specified subdirectory within the BASE_STATIC_DIR.
+    If no subdirectory is provided, files are uploaded directly to BASE_STATIC_DIR.
+    """
+    uploaded_file_names = []
+    
+    # Determine the target directory
+    if subdirectory:
+        # Sanitize subdirectory name to prevent path traversal attacks
+        # Path.as_posix() converts to forward slashes, and ".." check prevents going up
+        sanitized_subdirectory = Path(subdirectory).as_posix()
+        if ".." in sanitized_subdirectory or sanitized_subdirectory.startswith("/"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid subdirectory name.")
+        
+        target_directory = os.path.join(STATIC_DIR, sanitized_subdirectory)
+    else:
+        target_directory = STATIC_DIR
+
+    # Create the target directory if it doesn't exist
+    os.makedirs(target_directory, exist_ok=True)
+
+    for file in files:
+        try:
+            unique_filename = get_unique_filename(target_directory, file.filename)
+            file_path = os.path.join(target_directory, unique_filename)
+
+            with open(file_path, "wb") as buffer:
+                while contents := await file.read(1024 * 1024): # Read 1MB chunks
+                    buffer.write(contents)
+            
+            uploaded_file_names.append(unique_filename)
+            print(f"Uploaded: {unique_filename} to {target_directory}")
+
+        except Exception as e:
+            print(f"Error uploading {file.filename}: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload {file.filename}: {e}")
+        finally:
+            await file.close()
+
+    return {"message": f"Successfully uploaded {len(uploaded_file_names)} files.", "uploaded_files": uploaded_file_names}
+
+
 
 if __name__ == "__main__":
     import uvicorn

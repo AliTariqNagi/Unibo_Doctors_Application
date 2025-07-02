@@ -29,15 +29,15 @@ class CropDiagnosisEnum(str, Enum):
 
 class DoctorImageValidationResponse(BaseModel):
     id: Optional[int] = None
-    image_path: str
+    image_path: Optional[str]
     mask_path: Optional[str] = None
     crop_path: Optional[str] = None               # NEW
     crop_mask_path: Optional[str] = None          # NEW
     doctor_name: Optional[str] = None
-    rating: Optional[int] = None
+    #rating: Optional[int] = None
     comments: Optional[str] = None
     mask_comments: Optional[str] = None
-    disease_name: str
+    disease_name: Optional[str]
     category: Optional[str] = None
     created_at: Optional[datetime] = None
     #years_of_experience: Optional[int] = None
@@ -54,14 +54,36 @@ class DoctorImageValidationResponse(BaseModel):
         orm_mode = True
 
 
+# class DoctorImageValidationRequest(BaseModel):
+#     doctor_name: str
+#     rating: int
+#     comments: Optional[str] = None
+#     mask_comments: Optional[str] = None
+#     disease_name: str
+#     category: str
+#     #years_of_experience: Optional[int] = None  
+#     real_generated: str
+#     realism_rating: Optional[int] = None
+#     image_precision: str
+#     skin_color_precision: Optional[int] = None
+#     confidence_level: Optional[int] = None
+#     crop_quality_rating: Optional[int] = None
+#     crop_diagnosis: str
+#     fitzpatrick_scale: Optional[str] = None
+
 class DoctorImageValidationRequest(BaseModel):
+    # These fields are now required when creating a new entry
+    image_path: str                 # <--- ADDED/CHANGED
+    mask_path: Optional[str] = None # <--- ADDED/CHANGED
+    crop_path: Optional[str] = None # <--- ADDED/CHANGED
+    crop_mask_path: Optional[str] = None # <--- ADDED/CHANGED
+
     doctor_name: str
-    rating: int
+    #rating: int
     comments: Optional[str] = None
     mask_comments: Optional[str] = None
     disease_name: str
     category: str
-    #years_of_experience: Optional[int] = None  
     real_generated: str
     realism_rating: Optional[int] = None
     image_precision: str
@@ -70,6 +92,10 @@ class DoctorImageValidationRequest(BaseModel):
     crop_quality_rating: Optional[int] = None
     crop_diagnosis: str
     fitzpatrick_scale: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
 
 
 class DoctorSchema(BaseModel):
@@ -207,3 +233,87 @@ class CropImageFilenameResponse(BaseModel):
 
     class Config:
         orm_mode = True # Enable ORM mode for easier conversion from SQLAlchemy objects
+
+
+# schemas.py
+from pydantic import BaseModel, Field # <--- Add Field here
+from typing import Optional, List
+from datetime import datetime
+
+# Schema for requesting rating data for a single image
+class SingleCropImageRatingRequest(BaseModel):
+    image_path: str
+    doctor_name: str
+    comments: Optional[str] = None
+    crop_quality_rating: Optional[int] = Field(None, ge=1, le=7)
+    crop_diagnosis: Optional[str] = None
+
+# Schema for the response after rating images
+class CropImageRatingResponse(BaseModel):
+    id: int
+    image_path: str
+    doctor_name: str
+    comments: Optional[str] = None
+    crop_quality_rating: Optional[int] = None
+    crop_diagnosis: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# Schema for receiving a batch of rating data from the frontend
+class BatchCropImageRatingRequest(BaseModel):
+    validations: List[SingleCropImageRatingRequest] # Renamed from 'validations' to 'ratings' for clarity if you prefer, but 'validations' is fine if it aligns with your API
+
+# Schema for serving image metadata to the frontend
+class CropImageMetadata(BaseModel):
+    image_path: str
+
+
+# Schema for the request body when submitting a single crop quality rating
+class SingleCropQualityRatingRequest(BaseModel):
+    image_path: str # The URL path of the image being rated (e.g., /images/crop_quality_rating_images/image.jpg)
+    doctor_name: str
+    comments: Optional[str] = None
+    crop_quality_rating: int = Field(..., ge=1, le=7) # Rating from 1 to 7, required
+
+# Schema for the response after a single image rating submission
+class SingleCropQualityRatingResponse(BaseModel):
+    message: str
+    # You could add more fields here if the backend returns them, e.g.:
+    # id: int
+    # image_path: str
+
+# Schema for serving metadata of a single image to the frontend
+class SingleCropImageMetadata(BaseModel):
+    image_path: str # The URL path of the image to display
+
+# --- NEW SCHEMA: For Skin Tone Classification Request ---
+class SkinToneClassificationRequest(BaseModel):
+    doctor_name: str # Added doctor_name
+    fitzpatrick_scale: str
+    # These fields are now part of SkinToneClassification model,
+    # but the frontend doesn't send them directly in this request.
+    # The backend will fetch and populate them.
+    image_name: Optional[str] = None
+    image_path: Optional[str] = None
+    mask_name: Optional[str] = None
+    mask_path: Optional[str] = None
+    crop_image_name: Optional[str] = None
+    crop_image_path: Optional[str] = None
+    crop_mask_name: Optional[str] = None
+    crop_mask_path: Optional[str] = None
+
+
+# --- NEW SCHEMA: For Skin Tone Classification Response ---
+class SkinToneClassificationResponse(BaseModel):
+    message: str
+
+# --- NEW SCHEMA: For Patient Image Metadata (from /patient_images/{persona_digits}) ---
+class PatientImageMetadata(BaseModel):
+    image_path: str
+    image_name: str
+    mask_path: Optional[str] = None
+    mask_name: Optional[str] = None
+
+

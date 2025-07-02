@@ -272,3 +272,12 @@ id = Column(Integer, primary_key=True, index=True)
     crop_diagnosis = Column(String)
     fitzpatrick_scale = Column(String)
     created_at = Column(DateTime, server_default=func.now())
+
+
+# Delete Tables
+
+## /delete_table/ Deletes 'doctor_image_validation', 'doctors', 'skin_disease_image', 'crop_image_validation', 'crop_image_quality_rating'\
+                          'crop_image_rating'
+
+
+

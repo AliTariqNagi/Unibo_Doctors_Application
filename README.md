@@ -180,3 +180,17 @@ Get Random 15 files
     created_at = Column(DateTime, server_default=func.now())
 
 
+
+# Download Excel Crop Quality Rating
+## Frontend file: crop_quality_rating_download_excel.html
+## Table Name: crop_image_quality_rating
+### Table Fields:
+#### 
+    id = Column(Integer, primary_key=True, index=True)
+    image_path = Column(String, unique=True, index=True)
+    doctor_name = Column(String)
+    comments = Column(String)
+    crop_quality_rating = Column(Integer)
+    created_at = Column(DateTime, server_default=func.now())
+
+

@@ -1,1005 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skin Tone Classification</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        h1 { margin-bottom: 20px; }
-        .patient-selection { margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; }
-        .patient-selection label { margin-bottom: 5px; }
-        .patient-selection select { width: 250px; }
-        .image-grid-container { margin-bottom: 20px; }
-        .image-pair { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-        .image-pair img { max-width: 200px; height: auto; border: 1px solid #ddd; border-radius: 5px; }
-        .classification-form { display: flex; flex-direction: column; align-items: center; }
-        .fitzpatrick-guide { max-width: 600px; margin-top: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; }
-        label { margin-bottom: 10px; font-weight: bold; text-align: center; }
-        select { padding: 8px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc; width: 200px; }
-        button { background-color: #551A8B; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #440077; }
-        #message-container, #error-container { margin-top: 15px; font-weight: bold; text-align: center; }
-        #error-container { color: red; }
-        .no-mask { font-style: italic; color: gray; }
-    </style>
-</head>
-<body>
-    <h1>Skin Tone Classification</h1>
-
-    <div class="patient-selection">
-        <label for="patient-select">Select Patient (Persona ID):</label>
-        <select id="patient-select">
-            <option value="">-- Select Patient --</option>
-        </select>
-    </div>
-
-    <div class="image-grid-container" id="patient-images-grid"></div>
-
-    <div class="classification-form" id="classification-form" style="display: none;">
-        <label for="fitzpatrick-scale">How do you classify the skin tone of this patient according to the Fitzpatrick scale?</label>
-        <img src="https://medicalimages.apice.unibo.it/images/fitzpatrick.jpg" alt="Fitzpatrick Scale Guide" class="fitzpatrick-guide" />
-        <select id="fitzpatrick-scale" name="fitzpatrick_scale">
-            <option value="Type I">Type I</option>
-            <option value="Type II">Type II</option>
-            <option value="Type III">Type III</option>
-            <option value="Type IV">Type IV</option>
-            <option value="Type V">Type V</option>
-            <option value="Type VI">Type VI</option>
-        </select>
-        <button id="classify-button">Classify Skin Tone</button>
-        <div id="message-container"></div>
-        <div id="error-container"></div>
-    </div>
-
-    <a href="/" class="home-button" style="display: block; margin-top: 20px; text-align: center; padding: 10px; background-color: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 5px; text-decoration: none; width: 100px;">Home</a>
-
-    <script>
-        const patientSelect = document.getElementById('patient-select');
-        const patientImagesGrid = document.getElementById('patient-images-grid');
-        const classificationForm = document.getElementById('classification-form');
-        const fitzpatrickScaleSelect = document.getElementById('fitzpatrick-scale');
-        const classifyButton = document.getElementById('classify-button');
-        const messageContainer = document.getElementById('message-container');
-        const errorContainer = document.getElementById('error-container');
-        const backendUrl = 'https://medicalimages.apice.unibo.it';
-
-        let currentPatient = null;
-        let patientImages = [];
-
-        function loadUniquePatients() {
-            fetch(`${backendUrl}/unique_patients/`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(patients => {
-                    patients.forEach(patient => {
-                        const option = document.createElement('option');
-                        option.value = patient;
-                        option.textContent = patient;
-                        patientSelect.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading patients:', error);
-                    errorContainer.textContent = 'Failed to load patient list.';
-                });
-        }
-
-        function loadPatientImages(personaDigits) {
-            currentPatient = personaDigits;
-            patientImagesGrid.innerHTML = '';
-            classificationForm.style.display = 'none';
-            messageContainer.textContent = '';
-            errorContainer.textContent = '';
-
-            if (personaDigits) {
-                fetch(`${backendUrl}/patient_images/${personaDigits}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(images => {
-                        patientImages = images;
-                        if (images.length > 0) {
-                            images.forEach(image => {
-                                const imagePairDiv = document.createElement('div');
-                                imagePairDiv.classList.add('image-pair');
-
-                                const originalImg = document.createElement('img');
-                                originalImg.src = `${backendUrl}${image.image_path}`;
-                                originalImg.alt = image.image_name;
-                                imagePairDiv.appendChild(originalImg);
-
-                                if (image.mask_path) {
-                                    const maskImg = document.createElement('img');
-                                    maskImg.src = `${backendUrl}${image.mask_path}`;
-                                    maskImg.alt = image.mask_name;
-                                    imagePairDiv.appendChild(maskImg);
-                                } else {
-                                    const noMaskSpan = document.createElement('span');
-                                    noMaskSpan.classList.add('no-mask');
-                                    noMaskSpan.textContent = '(No Mask)';
-                                    imagePairDiv.appendChild(noMaskSpan);
-                                }
-
-                                patientImagesGrid.appendChild(imagePairDiv);
-                            });
-                            classificationForm.style.display = 'flex';
-                        } else {
-                            messageContainer.textContent = `No images found for patient ${personaDigits}.`;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading patient images:', error);
-                        errorContainer.textContent = `Failed to load images for patient ${personaDigits}.`;
-                    });
-            }
-        }
-
-        patientSelect.addEventListener('change', () => {
-            const selectedPatient = patientSelect.value;
-            loadPatientImages(selectedPatient);
-        });
-
-        classifyButton.addEventListener('click', () => {
-            if (currentPatient) {
-                const selectedScale = fitzpatrickScaleSelect.value;
-                fetch(`${backendUrl}/classify_skin_tone/${currentPatient}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `fitzpatrick_scale=${selectedScale}`,
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.detail || 'Failed to classify skin tone.');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    messageContainer.textContent = data.message;
-                    errorContainer.textContent = '';
-                })
-                .catch(error => {
-                    console.error('Error classifying skin tone:', error);
-                    errorContainer.textContent = error.message;
-                    messageContainer.textContent = '';
-                });
-            } else {
-                errorContainer.textContent = 'Please select a patient first.';
-            }
-        });
-
-        // Load unique patients on page load
-        loadUniquePatients();
-    </script>
-</body>
-</html> -->
-
-
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skin Tone Classification</title>
-    <style>
-        body { 
-            font-family: sans-serif; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            background-color: #f4f4f4;
-        }
-        h1 { margin-bottom: 20px; color: #333; }
-        
-        .selection-container { 
-            margin-bottom: 20px; 
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fff;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 10px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .selection-container label { 
-            margin-bottom: 5px; 
-            font-weight: bold; 
-            color: #555;
-            display: block;
-            text-align: center;
-        }
-        .selection-container select { 
-            width: calc(100% - 20px);
-            padding: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
-            font-size: 1em; 
-            box-sizing: border;
-            background-color: #fff;
-            cursor: pointer;
-        }
-
-        .image-grid-container { 
-            margin-bottom: 20px; 
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            width: 100%;
-            max-width: 900px;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .image-pair { 
-            display: flex; 
-            flex-direction: column;
-            gap: 5px; 
-            align-items: center; 
-            text-align: center;
-            border: 1px solid #f0f0f0;
-            border-radius: 5px;
-            padding: 10px;
-            background-color: #fafafa;
-        }
-        .image-pair img { 
-            max-width: 100%;
-            height: auto; 
-            border: 1px solid #ddd; 
-            border-radius: 5px; 
-        }
-        .classification-form { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fff;
-            width: 100%;
-            max-width: 600px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .fitzpatrick-guide { max-width: 100%; height: auto; margin-top: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; }
-        
-        .classification-form label { 
-            margin-bottom: 10px; 
-            font-weight: bold; 
-            text-align: center; 
-            color: #555;
-        }
-        .classification-form select { 
-            padding: 8px; 
-            margin-bottom: 15px; 
-            border-radius: 4px; 
-            border: 1px solid #ccc; 
-            width: 200px; 
-        }
-        button { 
-            background-color: #551A8B; 
-            color: white; 
-            padding: 10px 15px; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            transition: background-color 0.3s ease;
-        }
-        button:hover { background-color: #440077; }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
-
-        #message-container, #error-container { 
-            margin-top: 15px; 
-            font-weight: bold; 
-            text-align: center; 
-            width: 100%;
-        }
-        #error-container { color: red; }
-        #message-container { color: green; }
-
-        .no-mask { font-style: italic; color: gray; font-size: 0.9em; }
-        .image-name { font-size: 0.8em; color: #777; margin-top: 5px; }
-
-        .home-button {
-            display: block; 
-            margin-top: 20px; 
-            text-align: center; 
-            padding: 10px; 
-            background-color: #f0f0f0; 
-            color: #333; 
-            border: 1px solid #ccc; 
-            border-radius: 5px; 
-            text-decoration: none; 
-            width: 100px;
-            transition: background-color 0.3s ease;
-        }
-        .home-button:hover {
-            background-color: #e0e0e0;
-        }
-    </style>
-</head>
-<body>
-    <h1>Skin Tone Classification</h1>
-
-    <div class="selection-container">
-        <label for="doctor-select">Select Doctor:</label>
-        <select id="doctor-select" required>
-            <option value="">-- Select Doctor --</option>
-        </select>
-
-        <label for="patient-select">Select Patient (Persona ID):</label>
-        <select id="patient-select" required>
-            <option value="">-- Select Patient --</option>
-        </select>
-    </div>
-
-    <div class="image-grid-container" id="patient-images-grid"></div>
-
-    <div class="classification-form" id="classification-form" style="display: none;">
-        <label for="fitzpatrick-scale">How do you classify the skin tone of this patient according to the Fitzpatrick scale?</label>
-        <img src="https://medicalimages.apice.unibo.it/images/fitzpatrick.jpg" alt="Fitzpatrick Scale Guide" class="fitzpatrick-guide" />
-        <select id="fitzpatrick-scale" name="fitzpatrick_scale">
-            <option value="">-- Select Scale --</option>
-            <option value="Type I">Type I</option>
-            <option value="Type II">Type II</option>
-            <option value="Type III">Type III</option>
-            <option value="Type IV">Type IV</option>
-            <option value="Type V">Type V</option>
-            <option value="Type VI">Type VI</option>
-        </select>
-        <button id="classify-button" disabled>Classify Skin Tone</button>
-        <div id="message-container"></div>
-        <div id="error-container"></div>
-    </div>
-
-    <a href="/" class="home-button">Home</a>
-
-    <script>
-        const doctorSelect = document.getElementById('doctor-select');
-        const patientSelect = document.getElementById('patient-select');
-        const patientImagesGrid = document.getElementById('patient-images-grid');
-        const classificationForm = document.getElementById('classification-form');
-        const fitzpatrickScaleSelect = document.getElementById('fitzpatrick-scale');
-        const classifyButton = document.getElementById('classify-button');
-        const messageContainer = document.getElementById('message-container');
-        const errorContainer = document.getElementById('error-container');
-        const backendUrl = 'https://medicalimages.apice.unibo.it';
-
-        let currentPatient = null;
-
-        // Function to check if both doctor and patient are selected
-        function checkSelections() {
-            const isDoctorSelected = doctorSelect.value !== '';
-            const isPatientSelected = patientSelect.value !== '';
-            const isScaleSelected = fitzpatrickScaleSelect.value !== '';
-            classifyButton.disabled = !(isDoctorSelected && isPatientSelected && isScaleSelected);
-        }
-
-        // Function to load doctors and populate the doctor dropdown
-        async function loadDoctors() {
-            try {
-                const response = await fetch(`${backendUrl}/doctors/`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-                const doctors = await response.json();
-                doctorSelect.innerHTML = '<option value="">-- Select Doctor --</option>'; // Clear and add default
-                doctors.forEach(doctor => {
-                    const option = document.createElement('option');
-                    option.value = doctor.doctor_name;
-                    option.textContent = doctor.doctor_name;
-                    doctorSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading doctors:', error);
-                errorContainer.textContent = `Failed to load doctor list: ${error.message}`;
-            }
-        }
-
-        // Function to load unique patients and populate the patient dropdown
-        async function loadUniquePatients() {
-            try {
-                const response = await fetch(`${backendUrl}/unique_patients/`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-                const patients = await response.json();
-                patientSelect.innerHTML = '<option value="">-- Select Patient --</option>'; // Clear and add default
-                patients.forEach(patient => {
-                    const option = document.createElement('option');
-                    option.value = patient;
-                    option.textContent = patient;
-                    patientSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading patients:', error);
-                errorContainer.textContent = `Failed to load patient list: ${error.message}`;
-            }
-        }
-
-        // Function to load and display patient images
-        async function loadPatientImages(personaDigits) {
-            currentPatient = personaDigits;
-            patientImagesGrid.innerHTML = '';
-            classificationForm.style.display = 'none';
-            messageContainer.textContent = '';
-            errorContainer.textContent = '';
-            classifyButton.disabled = true;
-
-            if (!personaDigits) {
-                return; // Do nothing if no patient is selected
-            }
-
-            try {
-                const response = await fetch(`${backendUrl}/patient_images/${personaDigits}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-                const images = await response.json();
-
-                if (images.length > 0) {
-                    images.forEach(image => {
-                        const imagePairDiv = document.createElement('div');
-                        imagePairDiv.classList.add('image-pair');
-
-                        const originalImg = document.createElement('img');
-                        originalImg.src = `${backendUrl}${image.image_path}`;
-                        originalImg.alt = image.image_name;
-                        imagePairDiv.appendChild(originalImg);
-
-                        if (image.mask_path) {
-                            const maskImg = document.createElement('img');
-                            maskImg.src = `${backendUrl}${image.mask_path}`;
-                            maskImg.alt = image.mask_name;
-                            imagePairDiv.appendChild(maskImg);
-                        } else {
-                            const noMaskSpan = document.createElement('span');
-                            noMaskSpan.classList.add('no-mask');
-                            noMaskSpan.textContent = '(No Mask)';
-                            imagePairDiv.appendChild(noMaskSpan);
-                        }
-                        const imageNameSpan = document.createElement('span');
-                        imageNameSpan.classList.add('image-name');
-                        imageNameSpan.textContent = image.image_name;
-                        imagePairDiv.appendChild(imageNameSpan);
-
-                        patientImagesGrid.appendChild(imagePairDiv);
-                    });
-                    classificationForm.style.display = 'flex';
-                    checkSelections(); // Re-check button state after images load
-                } else {
-                    messageContainer.textContent = `No images found for patient ${personaDigits}.`;
-                }
-            } catch (error) {
-                console.error('Error loading patient images:', error);
-                errorContainer.textContent = `Failed to load images for patient ${personaDigits}: ${error.message}`;
-            }
-        }
-
-        // Event listeners
-        doctorSelect.addEventListener('change', () => {
-            patientSelect.value = ""; // Clear patient selection
-            patientImagesGrid.innerHTML = '';
-            classificationForm.style.display = 'none';
-            messageContainer.textContent = '';
-            errorContainer.textContent = '';
-            fitzpatrickScaleSelect.value = ""; // Reset Fitzpatrick scale
-            checkSelections();
-        });
-
-        patientSelect.addEventListener('change', () => {
-            const selectedPatient = patientSelect.value;
-            loadPatientImages(selectedPatient);
-            fitzpatrickScaleSelect.value = ""; // Reset Fitzpatrick scale
-            checkSelections();
-        });
-
-        fitzpatrickScaleSelect.addEventListener('change', () => {
-            checkSelections();
-        });
-
-        classifyButton.addEventListener('click', async () => {
-            const selectedDoctor = doctorSelect.value;
-            const selectedPatient = patientSelect.value;
-            const selectedScale = fitzpatrickScaleSelect.value;
-
-            if (!selectedDoctor) {
-                errorContainer.textContent = 'Please select a doctor.';
-                return;
-            }
-            if (!selectedPatient) {
-                errorContainer.textContent = 'Please select a patient first.';
-                return;
-            }
-            if (!selectedScale) {
-                errorContainer.textContent = 'Please select a Fitzpatrick scale.';
-                return;
-            }
-
-            messageContainer.textContent = 'Classifying...';
-            errorContainer.textContent = '';
-            classifyButton.disabled = true;
-
-            try {
-                const payload = {
-                    doctor_name: selectedDoctor,
-                    fitzpatrick_scale: selectedScale
-                };
-
-                const response = await fetch(`${backendUrl}/classify_skin_tone/${selectedPatient}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Failed to classify skin tone.');
-                }
-                const data = await response.json();
-                messageContainer.textContent = data.message;
-                
-                // Reset form and reload data after successful classification
-                doctorSelect.value = ""; // Clear doctor selection
-                patientSelect.value = ""; // Clear patient selection
-                patientImagesGrid.innerHTML = ''; // Clear images
-                classificationForm.style.display = 'none'; // Hide form
-                fitzpatrickScaleSelect.value = ""; // Reset Fitzpatrick scale
-                classifyButton.disabled = true; // Keep disabled
-                
-                loadDoctors(); // Reload doctors (optional, but ensures fresh list)
-                loadUniquePatients(); // Reload patients to remove the classified one
-
-            } catch (error) {
-                console.error('Error classifying skin tone:', error);
-                errorContainer.textContent = error.message;
-                messageContainer.textContent = '';
-                classifyButton.disabled = false;
-            }
-        });
-
-        // Initial loads on page load
-        loadDoctors();
-        loadUniquePatients();
-    </script>
-</body>
-</html> -->
-
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skin Tone Classification</title>
-    <style>
-        body { 
-            font-family: sans-serif; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            background-color: #f4f4f4;
-        }
-        h1 { margin-bottom: 20px; color: #333; }
-        
-        .selection-container { 
-            margin-bottom: 20px; 
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fff;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 10px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .selection-container label { 
-            margin-bottom: 5px; 
-            font-weight: bold; 
-            color: #555;
-            display: block;
-            text-align: center;
-        }
-        .selection-container select { 
-            width: calc(100% - 20px);
-            padding: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
-            font-size: 1em; 
-            box-sizing: border-box;
-            background-color: #fff;
-            cursor: pointer;
-        }
-
-        .image-grid-container { 
-            margin-bottom: 20px; 
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            width: 100%;
-            max-width: 900px;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .image-pair { 
-            display: flex; 
-            flex-direction: column;
-            gap: 5px; 
-            align-items: center; 
-            text-align: center;
-            border: 1px solid #f0f0f0;
-            border-radius: 5px;
-            padding: 10px;
-            background-color: #fafafa;
-        }
-        .image-pair img { 
-            max-width: 100%;
-            height: auto; 
-            border: 1px solid #ddd; 
-            border-radius: 5px; 
-        }
-        .classification-form { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fff;
-            width: 100%;
-            max-width: 600px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .fitzpatrick-guide { max-width: 100%; height: auto; margin-top: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; }
-        
-        .classification-form label { 
-            margin-bottom: 10px; 
-            font-weight: bold; 
-            text-align: center; 
-            color: #555;
-        }
-        .classification-form select { 
-            padding: 8px; 
-            margin-bottom: 15px; 
-            border-radius: 4px; 
-            border: 1px solid #ccc; 
-            width: 200px; 
-        }
-        button { 
-            background-color: #551A8B; 
-            color: white; 
-            padding: 10px 15px; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            transition: background-color 0.3s ease;
-        }
-        button:hover { background-color: #440077; }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
-
-        #message-container, #error-container { 
-            margin-top: 15px; 
-            font-weight: bold; 
-            text-align: center; 
-            width: 100%;
-        }
-        #error-container { color: red; }
-        #message-container { color: green; }
-
-        .no-mask { font-style: italic; color: gray; font-size: 0.9em; }
-        .image-name { font-size: 0.8em; color: #777; margin-top: 5px; }
-
-        .home-button {
-            display: block; 
-            margin-top: 20px; 
-            text-align: center; 
-            padding: 10px; 
-            background-color: #f0f0f0; 
-            color: #333; 
-            border: 1px solid #ccc; 
-            border-radius: 5px; 
-            text-decoration: none; 
-            width: 100px;
-            transition: background-color 0.3s ease;
-        }
-        .home-button:hover {
-            background-color: #e0e0e0;
-        }
-    </style>
-</head>
-<body>
-    <h1>Skin Tone Classification</h1>
-
-    <div class="selection-container">
-        <label for="doctor-select">Select Doctor:</label>
-        <select id="doctor-select" required>
-            <option value="">-- Select Doctor --</option>
-        </select>
-
-        <label for="patient-select">Select Patient (Persona ID):</label>
-        <select id="patient-select" required>
-            <option value="">-- Select Patient --</option>
-        </select>
-    </div>
-
-    <div class="image-grid-container" id="patient-images-grid"></div>
-
-    <div class="classification-form" id="classification-form" style="display: none;">
-        <label for="fitzpatrick-scale">How do you classify the skin tone of this patient according to the Fitzpatrick scale?</label>
-        <img src="https://medicalimages.apice.unibo.it/images/fitzpatrick.jpg" alt="Fitzpatrick Scale Guide" class="fitzpatrick-guide" />
-        <select id="fitzpatrick-scale" name="fitzpatrick_scale">
-            <option value="">-- Select Scale --</option>
-            <option value="Type I">Type I</option>
-            <option value="Type II">Type II</option>
-            <option value="Type III">Type III</option>
-            <option value="Type IV">Type IV</option>
-            <option value="Type V">Type V</option>
-            <option value="Type VI">Type VI</option>
-        </select>
-        <button id="classify-button" disabled>Classify Skin Tone</button>
-        <div id="message-container"></div>
-        <div id="error-container"></div>
-    </div>
-
-    <a href="/" class="home-button">Home</a>
-
-    <script>
-        const doctorSelect = document.getElementById('doctor-select');
-        const patientSelect = document.getElementById('patient-select');
-        const patientImagesGrid = document.getElementById('patient-images-grid');
-        const classificationForm = document.getElementById('classification-form');
-        const fitzpatrickScaleSelect = document.getElementById('fitzpatrick-scale');
-        const classifyButton = document.getElementById('classify-button');
-        const messageContainer = document.getElementById('message-container');
-        const errorContainer = document.getElementById('error-container');
-        const backendUrl = 'https://medicalimages.apice.unibo.it';
-
-        let currentPatient = null;
-
-        // Function to check if all necessary selections are made
-        function checkSelections() {
-            const isDoctorSelected = doctorSelect.value !== '';
-            const isPatientSelected = patientSelect.value !== '';
-            const isScaleSelected = fitzpatrickScaleSelect.value !== '';
-            classifyButton.disabled = !(isDoctorSelected && isPatientSelected && isScaleSelected);
-        }
-
-        // Function to load doctors and populate the doctor dropdown
-        async function loadDoctors() {
-            try {
-                const response = await fetch(`${backendUrl}/doctors/`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-                const doctors = await response.json();
-                doctorSelect.innerHTML = '<option value="">-- Select Doctor --</option>'; // Clear and add default
-                doctors.forEach(doctor => {
-                    const option = document.createElement('option');
-                    option.value = doctor.doctor_name;
-                    option.textContent = doctor.doctor_name;
-                    doctorSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading doctors:', error);
-                errorContainer.textContent = `Failed to load doctor list: ${error.message}`;
-            }
-        }
-
-        // Function to load unique patients and populate the patient dropdown (no doctor filter)
-        async function loadUniquePatients() {
-            // Only clear patient select, not images or form
-            patientSelect.innerHTML = '<option value="">-- Select Patient --</option>'; 
-            // Keep current images and form visible if a patient is already selected
-            // patientImagesGrid.innerHTML = ''; 
-            // classificationForm.style.display = 'none'; 
-            messageContainer.textContent = '';
-            errorContainer.textContent = '';
-            // fitzpatrickScaleSelect.value = ""; // Don't reset Fitzpatrick scale on doctor change
-            checkSelections(); // Re-check button state
-
-            try {
-                const response = await fetch(`${backendUrl}/unique_patients/`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-                const patients = await response.json();
-                patients.forEach(patient => {
-                    const option = document.createElement('option');
-                    option.value = patient;
-                    option.textContent = patient;
-                    patientSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading patients:', error);
-                errorContainer.textContent = `Failed to load patient list: ${error.message}`;
-            }
-        }
-
-        // Function to load and display patient images
-        async function loadPatientImages(personaDigits) {
-            currentPatient = personaDigits;
-            patientImagesGrid.innerHTML = '';
-            classificationForm.style.display = 'none';
-            messageContainer.textContent = '';
-            errorContainer.textContent = '';
-            classifyButton.disabled = true;
-
-            if (!personaDigits) {
-                return; // Do nothing if no patient is selected
-            }
-
-            try {
-                const response = await fetch(`${backendUrl}/patient_images/${personaDigits}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-                const images = await response.json();
-
-                if (images.length > 0) {
-                    images.forEach(image => {
-                        const imagePairDiv = document.createElement('div');
-                        imagePairDiv.classList.add('image-pair');
-
-                        const originalImg = document.createElement('img');
-                        originalImg.src = `${backendUrl}${image.image_path}`;
-                        originalImg.alt = image.image_name;
-                        imagePairDiv.appendChild(originalImg);
-
-                        if (image.mask_path) {
-                            const maskImg = document.createElement('img');
-                            maskImg.src = `${backendUrl}${image.mask_path}`;
-                            maskImg.alt = image.mask_name;
-                            imagePairDiv.appendChild(maskImg);
-                        } else {
-                            const noMaskSpan = document.createElement('span');
-                            noMaskSpan.classList.add('no-mask');
-                            noMaskSpan.textContent = '(No Mask)';
-                            imagePairDiv.appendChild(noMaskSpan);
-                        }
-                        const imageNameSpan = document.createElement('span');
-                        imageNameSpan.classList.add('image-name');
-                        imageNameSpan.textContent = image.image_name;
-                        imagePairDiv.appendChild(imageNameSpan);
-
-                        patientImagesGrid.appendChild(imagePairDiv);
-                    });
-                    classificationForm.style.display = 'flex';
-                    checkSelections(); // Re-check button state after images load
-                } else {
-                    messageContainer.textContent = `No images found for patient ${personaDigits}.`;
-                }
-            } catch (error) {
-                console.error('Error loading patient images:', error);
-                errorContainer.textContent = `Failed to load images for patient ${personaDigits}: ${error.message}`;
-            }
-        }
-
-        // Event listeners
-        doctorSelect.addEventListener('change', () => {
-            // Only update the classification form's button state and message,
-            // but do NOT clear patient selection or images.
-            messageContainer.textContent = '';
-            errorContainer.textContent = '';
-            checkSelections(); // Re-check button state as doctor selection changed
-            // Do not call loadUniquePatients() here to prevent clearing patient dropdown and images
-            // loadUniquePatients(); // REMOVED THIS CALL
-        });
-
-        patientSelect.addEventListener('change', () => {
-            const selectedPatient = patientSelect.value;
-            loadPatientImages(selectedPatient);
-            fitzpatrickScaleSelect.value = ""; // Reset Fitzpatrick scale when patient changes
-            checkSelections();
-        });
-
-        fitzpatrickScaleSelect.addEventListener('change', () => {
-            checkSelections();
-        });
-
-        classifyButton.addEventListener('click', async () => {
-            const selectedDoctor = doctorSelect.value;
-            const selectedPatient = patientSelect.value;
-            const selectedScale = fitzpatrickScaleSelect.value;
-
-            if (!selectedDoctor) {
-                errorContainer.textContent = 'Please select a doctor.';
-                return;
-            }
-            if (!selectedPatient) {
-                errorContainer.textContent = 'Please select a patient first.';
-                return;
-            }
-            if (!selectedScale) {
-                errorContainer.textContent = 'Please select a Fitzpatrick scale.';
-                return;
-            }
-
-            messageContainer.textContent = 'Classifying...';
-            errorContainer.textContent = '';
-            classifyButton.disabled = true;
-
-            try {
-                const payload = {
-                    doctor_name: selectedDoctor,
-                    fitzpatrick_scale: selectedScale
-                };
-
-                const response = await fetch(`${backendUrl}/classify_skin_tone/${selectedPatient}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Failed to classify skin tone.');
-                }
-                const data = await response.json();
-                messageContainer.textContent = data.message;
-                
-                // After successful classification, reset selections and reload initial data
-                doctorSelect.value = ""; 
-                patientSelect.value = ""; 
-                patientImagesGrid.innerHTML = ''; 
-                classificationForm.style.display = 'none'; 
-                fitzpatrickScaleSelect.value = ""; 
-                classifyButton.disabled = true; 
-                
-                loadDoctors(); 
-                loadUniquePatients(); 
-
-            } catch (error) {
-                console.error('Error classifying skin tone:', error);
-                errorContainer.textContent = error.message;
-                messageContainer.textContent = '';
-                classifyButton.disabled = false;
-            }
-        });
-
-        // Initial loads on page load
-        loadDoctors();
-        loadUniquePatients(); 
-    </script>
-</body>
-</html> -->
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1158,6 +156,14 @@
             <option value="">-- Select Doctor --</option>
         </select>
 
+        <!-- NEW FILTER: Validation Status -->
+        <label for="validation-status-select">Validation Status:</label>
+        <select id="validation-status-select">
+            <option value="all">All Images</option>
+            <option value="unvalidated">Yet to be Validated</option>
+            <option value="validated">Already Validated</option>
+        </select>
+
         <label for="patient-select">Select Patient (Persona ID):</label>
         <select id="patient-select" required>
             <option value="">-- Select Patient --</option>
@@ -1187,6 +193,7 @@
 
     <script>
         const doctorSelect = document.getElementById('doctor-select');
+        const validationStatusSelect = document.getElementById('validation-status-select'); // New element
         const patientSelect = document.getElementById('patient-select');
         const patientImagesGrid = document.getElementById('patient-images-grid');
         const classificationForm = document.getElementById('classification-form');
@@ -1228,15 +235,17 @@
             }
         }
 
-        // Function to load unique patients and populate the patient dropdown (no doctor filter)
-        async function loadUniquePatients() {
+        // Function to load unique patients based on validation status and populate the patient dropdown
+        async function loadUniquePatients(validationStatus) {
             patientSelect.innerHTML = '<option value="">-- Select Patient --</option>'; 
+            patientImagesGrid.innerHTML = ''; // Clear images when patient list changes
+            classificationForm.style.display = 'none'; // Hide form
             messageContainer.textContent = '';
             errorContainer.textContent = '';
             checkSelections(); 
 
             try {
-                const response = await fetch(`${backendUrl}/unique_patients/`);
+                const response = await fetch(`${backendUrl}/unique_patients/?validation_status=${validationStatus}`);
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
@@ -1254,8 +263,8 @@
             }
         }
 
-        // Function to load and display patient images
-        async function loadPatientImages(personaDigits) {
+        // Function to load and display patient images based on patient ID and validation status
+        async function loadPatientImages(personaDigits, validationStatus) {
             currentPatient = personaDigits;
             patientImagesGrid.innerHTML = '';
             classificationForm.style.display = 'none';
@@ -1268,7 +277,7 @@
             }
 
             try {
-                const response = await fetch(`${backendUrl}/patient_images/${personaDigits}`);
+                const response = await fetch(`${backendUrl}/patient_images/${personaDigits}?validation_status=${validationStatus}`);
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
@@ -1280,7 +289,7 @@
                     images = images.slice(0, 20);
                     messageContainer.textContent = `Displaying first 20 images for patient ${personaDigits}.`;
                 } else if (images.length === 0) {
-                    messageContainer.textContent = `No images found for patient ${personaDigits}.`;
+                    messageContainer.textContent = `No images found for patient ${personaDigits} with the selected validation status.`;
                 }
 
 
@@ -1325,12 +334,23 @@
         doctorSelect.addEventListener('change', () => {
             messageContainer.textContent = '';
             errorContainer.textContent = '';
-            checkSelections(); // Re-check button state as doctor selection changed
+            checkSelections(); 
+        });
+
+        // NEW: Event listener for validation status dropdown
+        validationStatusSelect.addEventListener('change', () => {
+            const selectedStatus = validationStatusSelect.value;
+            patientSelect.value = ""; // Reset patient selection
+            patientImagesGrid.innerHTML = ''; // Clear displayed images
+            classificationForm.style.display = 'none'; // Hide classification form
+            loadUniquePatients(selectedStatus); // Reload unique patients based on new status
+            checkSelections();
         });
 
         patientSelect.addEventListener('change', () => {
             const selectedPatient = patientSelect.value;
-            loadPatientImages(selectedPatient);
+            const selectedStatus = validationStatusSelect.value; // Get current validation status
+            loadPatientImages(selectedPatient, selectedStatus); // Pass validation status to image loading
             fitzpatrickScaleSelect.value = ""; // Reset Fitzpatrick scale when patient changes
             checkSelections();
         });
@@ -1390,8 +410,9 @@
                 fitzpatrickScaleSelect.value = ""; 
                 classifyButton.disabled = true; 
                 
+                // Reload doctors and unique patients with the current validation status
                 loadDoctors(); 
-                loadUniquePatients(); 
+                loadUniquePatients(validationStatusSelect.value); 
 
             } catch (error) {
                 console.error('Error classifying skin tone:', error);
@@ -1402,8 +423,11 @@
         });
 
         // Initial loads on page load
-        loadDoctors();
-        loadUniquePatients(); 
+        window.onload = async () => {
+            await loadDoctors();
+            // Load unique patients initially with "all" status
+            loadUniquePatients(validationStatusSelect.value); 
+        };
     </script>
 </body>
 </html>

@@ -727,45 +727,237 @@ async def get_skin_disease_image(image_id: int, db: Session = Depends(get_db)):
 #     return {"message": f"Skin tone for patient {persona_digits} classified as {fitzpatrick_scale}."}
 
 # --- (Optional) Route to get unique persona digits for classification UI ---
+# @app.get("/unique_patients/", response_model=List[str])
+# async def get_unique_patients(db: Session = Depends(get_db)):
+#     unique_personas = db.query(SkinDiseaseImage.persona_digits).distinct().all()
+#     return [persona[0] for persona in unique_personas if persona[0] is not None]
+
+# from app.schemas import PatientImageMetadata
+
+# # --- NEW ROUTE: Get Images for a Specific Patient ID ---
+# @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
+# async def get_patient_images(persona_digits: str, db: Session = Depends(get_db)): # Added db dependency
+#     """
+#     Retrieves all image and mask paths for a given patient ID (persona_digits) from the database.
+#     """
+#     # Query SkinDiseaseImage table for all images associated with this persona_digits
+#     images_from_db = db.query(SkinDiseaseImage).filter(
+#         SkinDiseaseImage.persona_digits == persona_digits
+#     ).all()
+
+#     if not images_from_db:
+#         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient in the database.")
+
+#     images_data = []
+#     for img_entry in images_from_db:
+#         images_data.append(PatientImageMetadata(
+#             image_path=img_entry.image_path, # Assuming this is a full URL path like /images/... or /skin_disease_data/...
+#             image_name=img_entry.image_name,
+#             mask_path=img_entry.mask_path,
+#             mask_name=img_entry.mask_name
+#         ))
+    
+#     # Sort the images for consistent display, e.g., by image_name
+#     images_data.sort(key=lambda x: x.image_name) 
+    
+#     return images_data
+
+
+# --- UPDATED ROUTE: Get Unique Patient IDs for Skin Tone Classification (with validation filter) ---
 @app.get("/unique_patients/", response_model=List[str])
-async def get_unique_patients(db: Session = Depends(get_db)):
-    unique_personas = db.query(SkinDiseaseImage.persona_digits).distinct().all()
-    return [persona[0] for persona in unique_personas if persona[0] is not None]
+async def get_unique_patients(
+    validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves unique patient (persona) IDs from the SkinDiseaseImage table,
+    optionally filtered by validation status (doctor_name presence).
+    """
+    query = db.query(SkinDiseaseImage.persona_digits)
 
-from app.schemas import PatientImageMetadata
+    if validation_status == "validated":
+        # Filter for entries where doctor_name is not NULL and not an empty string
+        query = query.filter(SkinDiseaseImage.doctor_name.isnot(None), SkinDiseaseImage.doctor_name != '')
+    elif validation_status == "unvalidated":
+        # Filter for entries where doctor_name is NULL or an empty string
+        query = query.filter(or_(SkinDiseaseImage.doctor_name.is_(None), SkinDiseaseImage.doctor_name == ''))
+    # If validation_status is 'all' or any other value, no filter is applied
 
-# --- NEW ROUTE: Get Images for a Specific Patient ID ---
+    unique_personas = query.distinct().all()
+    # Extract the string from the tuple and filter out any None values
+    return sorted([persona[0] for persona in unique_personas if persona[0] is not None])
+from sqlalchemy.sql import or_
+
+# --- UPDATED ROUTE: Get Images for a Specific Patient ID (with validation filter) ---
 @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
-async def get_patient_images(persona_digits: str, db: Session = Depends(get_db)): # Added db dependency
+async def get_patient_images(
+    persona_digits: str,
+    validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
+    db: Session = Depends(get_db)
+):
     """
-    Retrieves all image and mask paths for a given patient ID (persona_digits) from the database.
+    Retrieves all image and mask paths for a given patient ID (persona_digits) from the database,
+    optionally filtered by validation status.
     """
-    # Query SkinDiseaseImage table for all images associated with this persona_digits
-    images_from_db = db.query(SkinDiseaseImage).filter(
+    query = db.query(SkinDiseaseImage).filter(
         SkinDiseaseImage.persona_digits == persona_digits
-    ).all()
+    )
+
+    if validation_status == "validated":
+        query = query.filter(SkinDiseaseImage.doctor_name.isnot(None), SkinDiseaseImage.doctor_name != '')
+    elif validation_status == "unvalidated":
+        query = query.filter(or_(SkinDiseaseImage.doctor_name.is_(None), SkinDiseaseImage.doctor_name == ''))
+    
+    images_from_db = query.all()
 
     if not images_from_db:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient in the database.")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient with the specified validation status in the database.")
 
     images_data = []
     for img_entry in images_from_db:
         images_data.append(PatientImageMetadata(
-            image_path=img_entry.image_path, # Assuming this is a full URL path like /images/... or /skin_disease_data/...
+            image_path=img_entry.image_path,
             image_name=img_entry.image_name,
             mask_path=img_entry.mask_path,
             mask_name=img_entry.mask_name
         ))
     
-    # Sort the images for consistent display, e.g., by image_name
     images_data.sort(key=lambda x: x.image_name) 
     
     return images_data
 
 
+
 from app.schemas import SkinToneClassificationRequest, SkinToneClassificationResponse
 from http import HTTPStatus
 
+# --- UPDATED ROUTE: Classify Skin Tone (Implements Conditional SkinDiseaseImage Update/Create) ---
+# @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
+# async def classify_skin_tone(
+#     persona_digits: str,
+#     classification_data: SkinToneClassificationRequest, # Expecting JSON body from frontend
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Classifies the skin tone for a given patient (persona_digits) by a specific doctor.
+#     - Always creates a new entry in SkinToneClassification (logging each classification event).
+#     - Conditionally updates or creates entries in SkinDiseaseImage based on existing doctor_name.
+#     - No image directory is moved.
+#     """
+#     try:
+#         # Fetch the first SkinDiseaseImage entry for this persona_digits to get image/mask/crop paths
+#         # This assumes that if a patient has multiple images, picking the first one is acceptable
+#         # for logging in SkinToneClassification.
+#         # first_image_entry = db.query(models.SkinDiseaseImage).filter(
+#         #     models.SkinDiseaseImage.persona_digits == persona_digits
+#         # ).first()
+
+#         # image_name_log = None
+#         # image_path_log = None
+#         # mask_name_log = None
+#         # mask_path_log = None
+#         # crop_image_name_log = None
+#         # crop_image_path_log = None
+#         # crop_mask_name_log = None
+#         # crop_mask_path_log = None
+
+#         # if first_image_entry:
+#         #     image_name_log = first_image_entry.image_name
+#         #     image_path_log = first_image_entry.image_path
+#         #     mask_name_log = first_image_entry.mask_name
+#         #     mask_path_log = first_image_entry.mask_path
+#         #     crop_image_name_log = first_image_entry.crop_image_name
+#         #     crop_image_path_log = first_image_entry.crop_image_path
+#         #     crop_mask_name_log = first_image_entry.crop_mask_name
+#         #     crop_mask_path_log = first_image_entry.crop_mask_path
+#         # else:
+#         #     print(f"Warning: No SkinDiseaseImage entry found for persona_digits {persona_digits}. "
+#         #           "Image/mask/crop paths in SkinToneClassification will be null.")
+
+
+#         # # 1. Always create a new entry in SkinToneClassification
+#         # new_classification = models.SkinToneClassification(
+#         #     persona_digits=persona_digits,
+#         #     doctor_name=classification_data.doctor_name,
+#         #     fitzpatrick_scale=classification_data.fitzpatrick_scale,
+#         #     image_name=image_name_log, # Populating new fields
+#         #     image_path=image_path_log,
+#         #     mask_name=mask_name_log,
+#         #     mask_path=mask_path_log,
+#         #     crop_image_name=crop_image_name_log,
+#         #     crop_image_path=crop_image_path_log,
+#         #     crop_mask_name=crop_mask_name_log,
+#         #     crop_mask_path=crop_mask_path_log
+#         # )
+#         # db.add(new_classification)
+#         message_part_1 = f"New classification recorded for patient {persona_digits} by doctor {classification_data.doctor_name}."
+
+#         # 2. Conditionally update or create entries in SkinDiseaseImage
+#         skin_disease_images = db.query(SkinDiseaseImage).filter(
+#             SkinDiseaseImage.persona_digits == persona_digits
+#         ).all()
+
+#         # if not skin_disease_images:
+#         #     print(f"Warning: No SkinDiseaseImage entries found for persona_digits {persona_digits}. "
+#         #           "No SkinDiseaseImage records to update/create.")
+#         #     db.commit() # Commit the SkinToneClassification log entry
+#         #     return {"message": f"{message_part_1} No associated image records found to update/create."}
+
+#         for image_entry in skin_disease_images:
+#             # Check if doctor_name field is NULL or empty
+#             if image_entry.doctor_name is None or image_entry.doctor_name == "":
+#                 # Condition 1: Doctor name is not set, so UPDATE the existing entry
+#                 image_entry.doctor_name = classification_data.doctor_name
+#                 image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
+#                 # SQLAlchemy automatically tracks changes to managed objects for updates
+#                 print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
+#             else:
+#                 # Condition 2: Doctor name is already set, so CREATE a new entry
+#                 new_skin_disease_image_entry = SkinDiseaseImage(
+#                     disease_name_amended=image_entry.disease_name_amended,
+#                     disease_name=image_entry.disease_name,
+#                     persona_digits=image_entry.persona_digits,
+#                     example_digit=image_entry.example_digit,
+#                     image_name=image_entry.image_name, # Same image name
+#                     mask_name=image_entry.mask_name,
+#                     image_path=image_entry.image_path, # Same image path
+#                     mask_path=image_entry.mask_path,
+#                     crop_image_name=image_entry.crop_image_name,
+#                     crop_image_path=image_entry.crop_image_path,
+#                     crop_mask_name=image_entry.crop_mask_name,
+#                     crop_mask_path=image_entry.crop_mask_path,
+                    
+#                     doctor_name=classification_data.doctor_name, # New doctor name
+#                     fitzpatrick_scale=classification_data.fitzpatrick_scale, # New fitzpatrick scale
+#                     # Other fields can be copied or left as default/null if not relevant to classification
+#                     rating=image_entry.rating,
+#                     comments=image_entry.comments,
+#                     category=image_entry.category,
+#                     years_of_experience=image_entry.years_of_experience,
+#                     real_generated=image_entry.real_generated,
+#                     realism_rating=image_entry.realism_rating,
+#                     image_precision=image_entry.image_precision,
+#                     skin_color_precision=image_entry.skin_color_precision,
+#                     confidence_level=image_entry.confidence_level,
+#                     crop_quality_rating=image_entry.crop_quality_rating,
+#                     crop_diagnosis=image_entry.crop_diagnosis,
+#                     created_at=datetime.now() # Set new creation timestamp
+#                 )
+#                 db.add(new_skin_disease_image_entry)
+#                 print(f"Created new SkinDiseaseImage entry for {image_entry.image_name} with ID {new_skin_disease_image_entry.id}")
+
+#         db.commit() # Commit all changes (SkinToneClassification log and SkinDiseaseImage updates/creations)
+
+#         return {"message": f"{message_part_1} Associated image records conditionally updated/created."}
+
+#     except Exception as e:
+#         db.rollback()
+#         print(f"Error classifying skin tone for {persona_digits}: {e}")
+#         raise HTTPException(
+#             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+#             detail=f"An unexpected error occurred during classification: {e}"
+#         )
+    
 # --- UPDATED ROUTE: Classify Skin Tone (Implements Conditional SkinDiseaseImage Update/Create) ---
 @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
 async def classify_skin_tone(
@@ -780,91 +972,78 @@ async def classify_skin_tone(
     - No image directory is moved.
     """
     try:
-        # Fetch the first SkinDiseaseImage entry for this persona_digits to get image/mask/crop paths
-        # This assumes that if a patient has multiple images, picking the first one is acceptable
-        # for logging in SkinToneClassification.
-        # first_image_entry = db.query(models.SkinDiseaseImage).filter(
-        #     models.SkinDiseaseImage.persona_digits == persona_digits
-        # ).first()
+        # The frontend sends doctor_name and fitzpatrick_scale.
+        # We will apply this classification to all images for the given persona_digits
+        # that are currently 'unvalidated' (doctor_name is NULL or empty).
+        # If an image for this persona_digits already has a doctor_name, a new entry will be created.
 
-        # image_name_log = None
-        # image_path_log = None
-        # mask_name_log = None
-        # mask_path_log = None
-        # crop_image_name_log = None
-        # crop_image_path_log = None
-        # crop_mask_name_log = None
-        # crop_mask_path_log = None
-
-        # if first_image_entry:
-        #     image_name_log = first_image_entry.image_name
-        #     image_path_log = first_image_entry.image_path
-        #     mask_name_log = first_image_entry.mask_name
-        #     mask_path_log = first_image_entry.mask_path
-        #     crop_image_name_log = first_image_entry.crop_image_name
-        #     crop_image_path_log = first_image_entry.crop_image_path
-        #     crop_mask_name_log = first_image_entry.crop_mask_name
-        #     crop_mask_path_log = first_image_entry.crop_mask_path
-        # else:
-        #     print(f"Warning: No SkinDiseaseImage entry found for persona_digits {persona_digits}. "
-        #           "Image/mask/crop paths in SkinToneClassification will be null.")
-
-
-        # # 1. Always create a new entry in SkinToneClassification
-        # new_classification = models.SkinToneClassification(
-        #     persona_digits=persona_digits,
-        #     doctor_name=classification_data.doctor_name,
-        #     fitzpatrick_scale=classification_data.fitzpatrick_scale,
-        #     image_name=image_name_log, # Populating new fields
-        #     image_path=image_path_log,
-        #     mask_name=mask_name_log,
-        #     mask_path=mask_path_log,
-        #     crop_image_name=crop_image_name_log,
-        #     crop_image_path=crop_image_path_log,
-        #     crop_mask_name=crop_mask_name_log,
-        #     crop_mask_path=crop_mask_path_log
-        # )
-        # db.add(new_classification)
-        message_part_1 = f"New classification recorded for patient {persona_digits} by doctor {classification_data.doctor_name}."
-
-        # 2. Conditionally update or create entries in SkinDiseaseImage
         skin_disease_images = db.query(SkinDiseaseImage).filter(
             SkinDiseaseImage.persona_digits == persona_digits
         ).all()
 
-        # if not skin_disease_images:
-        #     print(f"Warning: No SkinDiseaseImage entries found for persona_digits {persona_digits}. "
-        #           "No SkinDiseaseImage records to update/create.")
-        #     db.commit() # Commit the SkinToneClassification log entry
-        #     return {"message": f"{message_part_1} No associated image records found to update/create."}
+        if not skin_disease_images:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail=f"No SkinDiseaseImage entries found for persona_digits {persona_digits}."
+            )
+
+        updated_count = 0
+        created_count = 0
 
         for image_entry in skin_disease_images:
-            # Check if doctor_name field is NULL or empty
+            # Determine image/mask/crop paths for the SkinToneClassification log entry
+            image_name_log = image_entry.image_name
+            image_path_log = image_entry.image_path
+            mask_name_log = image_entry.mask_name
+            mask_path_log = image_entry.mask_path
+            crop_image_name_log = image_entry.crop_image_name
+            crop_image_path_log = image_entry.crop_image_path
+            crop_mask_name_log = image_entry.crop_mask_name
+            crop_mask_path_log = image_entry.crop_mask_path
+
+            # Always create a new entry in SkinToneClassification (logging each classification event)
+            new_classification_log = models.SkinToneClassification(
+                persona_digits=persona_digits,
+                doctor_name=classification_data.doctor_name,
+                fitzpatrick_scale=classification_data.fitzpatrick_scale,
+                image_name=image_name_log,
+                image_path=image_path_log,
+                mask_name=mask_name_log,
+                mask_path=mask_path_log,
+                crop_image_name=crop_image_name_log,
+                crop_image_path=crop_image_path_log,
+                crop_mask_name=crop_mask_name_log,
+                crop_mask_path=crop_mask_path_log
+            )
+            db.add(new_classification_log)
+
+            # Conditionally update or create entries in SkinDiseaseImage
             if image_entry.doctor_name is None or image_entry.doctor_name == "":
                 # Condition 1: Doctor name is not set, so UPDATE the existing entry
                 image_entry.doctor_name = classification_data.doctor_name
                 image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
-                # SQLAlchemy automatically tracks changes to managed objects for updates
+                updated_count += 1
                 print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
             else:
                 # Condition 2: Doctor name is already set, so CREATE a new entry
+                # This ensures a history of classifications by different doctors or re-classifications
                 new_skin_disease_image_entry = SkinDiseaseImage(
                     disease_name_amended=image_entry.disease_name_amended,
                     disease_name=image_entry.disease_name,
                     persona_digits=image_entry.persona_digits,
                     example_digit=image_entry.example_digit,
-                    image_name=image_entry.image_name, # Same image name
+                    image_name=image_entry.image_name,
                     mask_name=image_entry.mask_name,
-                    image_path=image_entry.image_path, # Same image path
+                    image_path=image_entry.image_path,
                     mask_path=image_entry.mask_path,
                     crop_image_name=image_entry.crop_image_name,
                     crop_image_path=image_entry.crop_image_path,
                     crop_mask_name=image_entry.crop_mask_name,
                     crop_mask_path=image_entry.crop_mask_path,
                     
-                    doctor_name=classification_data.doctor_name, # New doctor name
-                    fitzpatrick_scale=classification_data.fitzpatrick_scale, # New fitzpatrick scale
-                    # Other fields can be copied or left as default/null if not relevant to classification
+                    doctor_name=classification_data.doctor_name,
+                    fitzpatrick_scale=classification_data.fitzpatrick_scale,
+                    
                     rating=image_entry.rating,
                     comments=image_entry.comments,
                     category=image_entry.category,
@@ -876,14 +1055,15 @@ async def classify_skin_tone(
                     confidence_level=image_entry.confidence_level,
                     crop_quality_rating=image_entry.crop_quality_rating,
                     crop_diagnosis=image_entry.crop_diagnosis,
-                    created_at=datetime.now() # Set new creation timestamp
+                    created_at=datetime.now()
                 )
                 db.add(new_skin_disease_image_entry)
+                created_count += 1
                 print(f"Created new SkinDiseaseImage entry for {image_entry.image_name} with ID {new_skin_disease_image_entry.id}")
 
-        db.commit() # Commit all changes (SkinToneClassification log and SkinDiseaseImage updates/creations)
+        db.commit()
 
-        return {"message": f"{message_part_1} Associated image records conditionally updated/created."}
+        return {"message": f"Classification submitted for patient {persona_digits}. {updated_count} existing records updated, {created_count} new records created."}
 
     except Exception as e:
         db.rollback()
@@ -892,8 +1072,6 @@ async def classify_skin_tone(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during classification: {e}"
         )
-    
-
 
 @app.get("/check_skin_disease_images/", response_model=List[SkinDiseaseImageResponse])
 async def get_skin_disease_image_contents(db: Session = Depends(get_db)):
@@ -1535,7 +1713,7 @@ def submit_batch_categorization(
             doctor_name=payload.doctor_name,
             comments=payload.comments,
             crop_diagnosis=payload.crop_diagnosis,
-            fitzpatrick_scale=payload.fitzpatrick_scale,
+            fitzpatrick_scale=None, #payload.fitzpatrick_scale,
             created_at=datetime.now(timezone.utc) # <--- Use timezone.utc here
         )
         records_to_add.append(db_record)

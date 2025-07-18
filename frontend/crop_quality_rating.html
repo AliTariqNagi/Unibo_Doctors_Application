@@ -92,7 +92,7 @@
         .message {
             margin-top: 10px;
             font-weight: bold;
-            color: #28a745; /* Green for success */
+            color: #d80bb6; /* Green for success */
         }
         .error {
             color: #dc3545; /* Red for error */
@@ -110,15 +110,16 @@
             </select>
 
             <label for="quality-rating">Crop Quality Rating:</label>
+            <p class="question-description">How visually realistic does this image appear to you?</p>
             <select id="quality-rating" required>
                 <option value="">Select rating</option>
-                <option value="1">1 - Very poor</option>
-                <option value="2">2 - Poor</option>
-                <option value="3">3 - Fair</option>
-                <option value="4">4 - Neutral</option>
-                <option value="5">5 - Good</option>
-                <option value="6">6 - Very good</option>
-                <option value="7">7 - Excellent</option>
+                <option value="1">1 - Unacceptable quality</option>
+                <option value="2">2 - very poor quality</option>
+                <option value="3">3 - poor quality</option>
+                <option value="4">4 - acceptable/neutral quality</option>
+                <option value="5">5 - good quality</option>
+                <option value="6">6 - very good quality, </option>
+                <option value="7">7 - excellent quality</option>
             </select>
 
             <label for="comments">Comments (Optional):</label>
@@ -129,8 +130,7 @@
 
         <div id="currentImageContainer">
             <!-- Added a placeholder image and onerror handler -->
-            <img id="currentImage" src="https://placehold.co/400x300/e0e0e0/555555?text=No+Image" alt="Image to Rate" 
-                 onerror="this.onerror=null;this.src='https://placehold.co/400x300/e0e0e0/555555?text=Image+Load+Error';">
+            <img id="currentImage" alt="Image" >
             <p id="imageFileName"></p>
         </div>
 
@@ -177,7 +177,7 @@
         async function fetchAndDisplayNextImage() {
             const selectedDoctor = doctorSelect.value;
             if (!selectedDoctor) {
-                statusMessage.textContent = "Please select a doctor to begin rating.";
+                statusMessage.textContent = "Please select the doctor";
                 statusMessage.classList.add("error");
                 submitRatingBtn.disabled = true;
                 // Reset image to placeholder when no doctor is selected
@@ -208,14 +208,14 @@
                     currentImage.src = `${backendUrl}${currentImagePath}`;
                     imageFileNameDisplay.textContent = `File: ${currentImagePath.split('/').pop()}`;
                     submitRatingBtn.disabled = false;
-                    statusMessage.textContent = "Image loaded. Please provide your rating.";
+                    statusMessage.textContent = "Image loaded.";
                     statusMessage.classList.add("message");
                 } else {
                     currentImagePath = null;
-                    currentImage.src = "https://placehold.co/400x300/e0e0e0/555555?text=No+More+Images"; // Specific placeholder
-                    imageFileNameDisplay.textContent = "No more unrated images available!";
+                    currentImage.src = ""; // Specific placeholder
+                    imageFileNameDisplay.textContent = "No data available!";
                     submitRatingBtn.disabled = true;
-                    statusMessage.textContent = "All images have been rated!";
+                    statusMessage.textContent = "No Data Available!";
                     statusMessage.classList.add("message");
                 }
             } catch (error) {

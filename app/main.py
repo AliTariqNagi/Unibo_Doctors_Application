@@ -1394,33 +1394,33 @@ def submit_validation(
 
     # Define the source paths for the images based on BASE_IMAGE_DIR and the original base_name
     # Assuming original images are directly in BASE_IMAGE_DIR
-    orig_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}.jpg")
-    orig_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_mask.jpg")
+    #orig_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}.jpg")
+    #orig_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_mask.jpg")
     crop_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop.jpg")
     crop_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop_mask.jpg")
 
     # Move images and get their new unique filenames and absolute paths
-    image_new_filename, image_abs_path = move_with_unique_name(orig_image_src, CATEGORIZED_IMAGES_DIR)
-    mask_new_filename, mask_abs_path = move_with_unique_name(orig_mask_src, CATEGORIZED_IMAGES_DIR)
+    #image_new_filename, image_abs_path = move_with_unique_name(orig_image_src, CATEGORIZED_IMAGES_DIR)
+    #mask_new_filename, mask_abs_path = move_with_unique_name(orig_mask_src, CATEGORIZED_IMAGES_DIR)
     crop_new_filename, crop_abs_path = move_with_unique_name(crop_image_src, CATEGORIZED_IMAGES_DIR)
     crop_mask_new_filename, crop_mask_abs_path = move_with_unique_name(crop_mask_src, CATEGORIZED_IMAGES_DIR)
 
     # Check if any required image failed to move
     # If a source file was not found, move_with_unique_name returns (None, None)
-    if not image_new_filename: # Original image is mandatory
-        raise HTTPException(status_code=400, detail=f"Original image file not found or could not be moved: {orig_image_src}")
+    #if not image_new_filename: # Original image is mandatory
+    #    raise HTTPException(status_code=400, detail=f"Original image file not found or could not be moved: {orig_image_src}")
 
     # Construct the URL paths to be stored in the database
     # These paths are relative to the `/images/` FastAPI mount point
-    image_db_path = f"/images/categorized_images_crops_categorized/{image_new_filename}"
-    mask_db_path = f"/images/categorized_images_crops_categorized/{mask_new_filename}" if mask_new_filename else None
+    #image_db_path = f"/images/categorized_images_crops_categorized/{image_new_filename}"
+    #mask_db_path = f"/images/categorized_images_crops_categorized/{mask_new_filename}" if mask_new_filename else None
     crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
     crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
 
     # Save to DB
     db_record = DoctorImageValidation(
-        image_path=image_db_path,
-        mask_path=mask_db_path,
+        #image_path=image_db_path,
+        #mask_path=mask_db_path,
         crop_path=crop_db_path,
         crop_mask_path=crop_mask_db_path,
         doctor_name=payload.doctor_name,
@@ -1473,7 +1473,7 @@ async def get_all_base_names():
         base_names = set()
 
         # Define suffixes we need to check for each base
-        suffixes = ["", "_mask", "_crop", "_crop_mask"]
+        suffixes = ["_crop", "_crop_mask"]
 
         # Checks for a single file if all the suffixes exist
         def has_all_files(base, ext):
@@ -1497,8 +1497,8 @@ async def get_all_base_names():
             if has_all_files(base, "jpg"):
                 valid_bases.add(base)
             # Check for png
-            elif has_all_files(base, "png"):
-                valid_bases.add(base)
+            #elif has_all_files(base, "png"):
+            #    valid_bases.add(base)
 
         # Sort base names before return
         return JSONResponse(content=sorted(valid_bases))

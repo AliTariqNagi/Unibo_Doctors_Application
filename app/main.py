@@ -579,8 +579,7 @@ def delete_table_route(table_name: str, db: Session = Depends(get_db)):
     Returns:
         A dictionary indicating the result of the operation.
     """
-    if table_name not in ('doctor_image_validation', 'doctors', 'skin_disease_image', 'crop_image_validation', 'crop_image_quality_rating'\
-                          'crop_image_rating'):
+    if table_name not in ('doctor_image_validation', 'doctors', 'skin_disease_image', 'crop_image_validation', 'crop_image_quality_rating', 'crop_image_rating'):
         raise HTTPException(
             status_code=400,
             detail="Invalid table name. Must be 'doctor_image_validation', 'doctors', 'skin_disease_image', 'crop_image_validation', 'crop_image_quality_rating'\

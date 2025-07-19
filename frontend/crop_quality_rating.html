@@ -246,7 +246,7 @@
                 return;
             }
             if (!currentImagePath) {
-                statusMessage.textContent = "No image loaded to rate.";
+                statusMessage.textContent = "No image.";
                 statusMessage.classList.add("error");
                 return;
             }
@@ -259,7 +259,7 @@
                 qualityRatingSelect.style.border = "";
             }
 
-            statusMessage.textContent = "Submitting rating...";
+            statusMessage.textContent = "Submitting ...";
             statusMessage.classList.remove("error", "message");
             submitRatingBtn.disabled = true; // Disable button during submission
 
@@ -283,7 +283,7 @@
                 }
 
                 const result = await response.json();
-                statusMessage.textContent = result.message || "Rating submitted successfully!";
+                statusMessage.textContent = result.message || "Submitted successfully!";
                 statusMessage.classList.add("message");
 
                 // Fetch the next image automatically after successful submission
@@ -291,7 +291,7 @@
 
             } catch (error) {
                 console.error("Error submitting rating:", error);
-                statusMessage.textContent = `Error submitting rating: ${error.message}`;
+                statusMessage.textContent = `Error submitting : ${error.message}`;
                 statusMessage.classList.add("error");
                 submitRatingBtn.disabled = false; // Re-enable button on error
             }

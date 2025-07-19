@@ -34,13 +34,12 @@ class DoctorImageValidationResponse(BaseModel):
     crop_path: Optional[str] = None               # NEW
     crop_mask_path: Optional[str] = None          # NEW
     doctor_name: Optional[str] = None
-    #rating: Optional[int] = None
+    mask_rating: Optional[int] = None
     comments: Optional[str] = None
     mask_comments: Optional[str] = None
     disease_name: Optional[str]
     category: Optional[str] = None
     created_at: Optional[datetime] = None
-    #years_of_experience: Optional[int] = None
     real_generated: Optional[str] = None
     realism_rating: Optional[int] = None
     image_precision: Optional[str] = None
@@ -73,25 +72,25 @@ class DoctorImageValidationResponse(BaseModel):
 
 class DoctorImageValidationRequest(BaseModel):
     # These fields are now required when creating a new entry
-    image_path: str                 # <--- ADDED/CHANGED
-    mask_path: Optional[str] = None # <--- ADDED/CHANGED
+    #image_path: str                 # <--- ADDED/CHANGED
+    #mask_path: Optional[str] = None # <--- ADDED/CHANGED
     crop_path: Optional[str] = None # <--- ADDED/CHANGED
     crop_mask_path: Optional[str] = None # <--- ADDED/CHANGED
-
-    doctor_name: str
+    mask_rating: Optional[int] = None   #--------------DONE
+    doctor_name: str   #--------------DONE
     #rating: int
-    comments: Optional[str] = None
-    mask_comments: Optional[str] = None
-    disease_name: str
-    category: str
-    real_generated: str
-    realism_rating: Optional[int] = None
-    image_precision: str
-    skin_color_precision: Optional[int] = None
-    confidence_level: Optional[int] = None
-    crop_quality_rating: Optional[int] = None
-    crop_diagnosis: str
-    fitzpatrick_scale: Optional[str] = None
+    comments: Optional[str] = None   #--------------DONE
+    mask_comments: Optional[str] = None   #--------------DONE
+    #disease_name: str
+    #category: str
+    real_generated: Optional[str]   #--------------DONE
+    realism_rating: Optional[int] = None   #--------------DONE
+    image_precision: str   #--------------DONE
+    #skin_color_precision: Optional[int] = None
+    confidence_level: Optional[int] = None   #--------------DONE
+    #crop_quality_rating: Optional[int] = None
+    #crop_diagnosis: str
+    #fitzpatrick_scale: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -211,7 +210,8 @@ class CropImageValidationRequest(BaseModel):
     comments: Optional[str] = None
     # Using the Enum for validation and consistency
     crop_diagnosis: CropDiagnosisEnum
-    fitzpatrick_scale: str # Assuming Fitzpatrick is a string 'I', 'II', etc.
+    #fitzpatrick_scale: str # Assuming Fitzpatrick is a string 'I', 'II', etc.
+    #image_filename : str
 
 
 class CropImageValidationResponse(BaseModel): # No longer inherits from CropImageValidationRequest
@@ -221,7 +221,7 @@ class CropImageValidationResponse(BaseModel): # No longer inherits from CropImag
     doctor_name: str
     comments: Optional[str] = None
     crop_diagnosis: CropDiagnosisEnum
-    fitzpatrick_scale: str
+    fitzpatrick_scale: Optional[str]
     created_at: datetime
 
     class Config:

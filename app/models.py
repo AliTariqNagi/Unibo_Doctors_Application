@@ -38,28 +38,25 @@ class DoctorImageValidation(Base):
     __tablename__ = "doctor_image_validation"
 
     id = Column(Integer, primary_key=True, index=True)
-    image_path = Column(String)
-    mask_path = Column(String)
-    crop_path = Column(String)            # New
-    crop_mask_path = Column(String)       # New
-
-    doctor_name = Column(String)
-    #rating = Column(Integer)
-    comments = Column(String)
-    mask_comments = Column(String)
-    disease_name = Column(String)
-    category = Column(String)
-    created_at = Column(DateTime, server_default=func.now())
-
-    #years_of_experience = Column(Integer)   
-    real_generated = Column(String)
-    realism_rating = Column(Integer)
-    image_precision = Column(String)
-    skin_color_precision = Column(Integer)
-    confidence_level = Column(Integer)
-    crop_quality_rating = Column(Integer)
-    crop_diagnosis = Column(String)
-    fitzpatrick_scale = Column(String)
+    image_path = Column(String)   #--------------DONE
+    mask_path = Column(String)   #--------------DONE
+    crop_path = Column(String)         #--------------DONE      # New
+    crop_mask_path = Column(String)      #--------------DONE    # New
+    mask_rating = Column(Integer)   #--------------DONE
+    doctor_name = Column(String)   #--------------DONE
+    comments = Column(String)   #--------------DONE
+    mask_comments = Column(String)   #--------------DONE
+    disease_name = Column(String)   #--------------DONE
+    category = Column(String)   #--------------DONE
+    created_at = Column(DateTime, server_default=func.now())   #--------------DONE
+    real_generated = Column(String)   #--------------DONE
+    realism_rating = Column(Integer)   #--------------DONE
+    image_precision = Column(String)   #--------------DONE
+    skin_color_precision = Column(Integer)   #--------------DONE
+    confidence_level = Column(Integer)   #--------------DONE
+    crop_quality_rating = Column(Integer)   #--------------DONE
+    crop_diagnosis = Column(String)   #--------------DONE
+    fitzpatrick_scale = Column(String)   #--------------DONE
 
 
 class SkinDiseaseImage(Base):
@@ -103,6 +100,7 @@ class CropImageValidation(Base):
     __tablename__ = "crop_image_validation" # New table name
 
     id = Column(Integer, primary_key=True, index=True)
+    image_filename = Column(String)
     image_path = Column(String) # Path to the categorized crop image
     doctor_name = Column(String)
     comments = Column(String)

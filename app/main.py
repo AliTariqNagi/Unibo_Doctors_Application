@@ -1389,6 +1389,7 @@ def submit_validation(
     payload: DoctorImageValidationRequest,
     db: Session = Depends(get_db)
 ):
+    print(payload)
     # Define the single target directory for all categorized images
     CATEGORIZED_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
 
@@ -1419,34 +1420,47 @@ def submit_validation(
 
     # Save to DB
     db_record = DoctorImageValidation(
-        #image_path=image_db_path,
-        #mask_path=mask_db_path,
+        image_path=None,#image_db_path,
+        mask_path=None,#mask_db_path,
         crop_path=crop_db_path,
         crop_mask_path=crop_mask_db_path,
-        doctor_name=payload.doctor_name,
-        #rating=payload.rating,
-        comments=payload.comments,
-        mask_comments=payload.mask_comments,
-        disease_name=payload.disease_name,
-        category=payload.category,
-        real_generated=payload.real_generated,
-        realism_rating=payload.realism_rating,
-        image_precision=payload.image_precision,
-        skin_color_precision=payload.skin_color_precision,
-        confidence_level=payload.confidence_level,
-        crop_quality_rating=payload.crop_quality_rating,
-        crop_diagnosis=payload.crop_diagnosis,
-        fitzpatrick_scale=payload.fitzpatrick_scale,
+        doctor_name=payload.doctor_name, #--------------DONE
+        mask_rating=payload.mask_rating,   #--------------DONE
+        comments=payload.comments,   #--------------DONE
+        mask_comments=payload.mask_comments,   #--------------DONE
+        disease_name=None,#payload.disease_name,
+        category=None,#payload.category,
+        real_generated=payload.real_generated,   #--------------DONE
+        realism_rating=payload.realism_rating,   #--------------DONE
+        image_precision=payload.image_precision,   #--------------DONE
+        skin_color_precision=None,#payload.skin_color_precision,
+        confidence_level=payload.confidence_level,   #--------------DONE
+        crop_quality_rating=None,#payload.crop_quality_rating,
+        crop_diagnosis=None,#payload.crop_diagnosis,
+        fitzpatrick_scale=None,#payload.fitzpatrick_scale,
         created_at=datetime.utcnow()
     )
 
+    print(payload)
     db.add(db_record)
     db.commit()
     db.refresh(db_record)
 
     return db_record
 
-
+# const payload = {
+#                 doctor_name: doctorNameInput.value,
+#                 comments: commentsInput.value,
+#                 mask_comments: maskCommentsInput.value,
+#                 //category: categorySelect.value,
+#                 real_generated: getRadioValue('real_generated'), // Now a number (1 or 2)
+#                 realism_rating: getRadioValue('realism_rating'),
+#                 mask_rating: getRadioValue('mask_rating'), // New field
+#                 image_precision: getSelectValue('image_precision'),
+#                 confidence_level: getRadioValue('confidence_level'),
+#                 // Removed: disease_name, skin_color_precision, crop_quality_rating, crop_diagnosis, fitzpatrick_scale
+#                 // Image paths are handled by the backend based on base_name, not sent in payload for this endpoint
+#             };
 
 
 import os
@@ -1462,49 +1476,77 @@ IMAGE_NAMES_DIR = os.path.join(STATIC_DIR, "categorized_images")
 os.makedirs(IMAGE_NAMES_DIR, exist_ok=True) # Ensure the new directory exists
 
 
+from fastapi.responses import JSONResponse
+import os
+
+from fastapi.responses import JSONResponse
+import os
+
 @app.get("/get_all_base_names")
 async def get_all_base_names():
     try:
         files = os.listdir(IMAGE_NAMES_DIR)
-        # Collect all filenames without extensions for jpg and png separately
-        jpg_files = set(f for f in files if f.endswith(".jpg"))
-        png_files = set(f for f in files if f.endswith(".png"))
-
-        base_names = set()
-
-        # Define suffixes we need to check for each base
-        suffixes = ["_crop", "_crop_mask"]
-
-        # Checks for a single file if all the suffixes exist
-        def has_all_files(base, ext):
-            for suffix in suffixes:
-                if f"{base}{suffix}.{ext}" not in files:
-                    return False
-            return True
-
-        # Iterate over all files and extract possible bases
-        candidates = set()
-        for f in files:
-            if f.endswith(".jpg"):
-                candidates.add(f[:-4])  # remove .jpg
-            elif f.endswith(".png"):
-                candidates.add(f[:-4])  # remove .png
+        files_set = set(files)
 
         valid_bases = set()
 
-        for base in candidates:
-            # Check for jpg
-            if has_all_files(base, "jpg"):
-                valid_bases.add(base)
-            # Check for png
-            #elif has_all_files(base, "png"):
-            #    valid_bases.add(base)
+        for f in files:
+            if f.endswith("_crop.jpg"):
+                base = f.replace("_crop.jpg", "")
+                crop_mask = f"{base}_crop_mask.jpg"
+                if crop_mask in files_set:
+                    valid_bases.add(base)
 
-        # Sort base names before return
         return JSONResponse(content=sorted(valid_bases))
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+# @app.get("/get_all_base_names")
+# async def get_all_base_names():
+#     try:
+#         files = os.listdir(IMAGE_NAMES_DIR)
+#         # Collect all filenames without extensions for jpg and png separately
+#         jpg_files = set(f for f in files if f.endswith(".jpg"))
+#         png_files = set(f for f in files if f.endswith(".png"))
+
+#         base_names = set()
+
+#         # Define suffixes we need to check for each base
+#         suffixes = ["_crop", "_crop_mask"]
+
+#         # Checks for a single file if all the suffixes exist
+#         def has_all_files(base, ext):
+#             for suffix in suffixes:
+#                 if f"{base}{suffix}.{ext}" not in files:
+#                     return False
+#             return True
+
+#         # Iterate over all files and extract possible bases
+#         candidates = set()
+#         for f in files:
+#             if f.endswith(".jpg"):
+#                 candidates.add(f[:-4])  # remove .jpg
+#             #elif f.endswith(".png"):
+#             #    candidates.add(f[:-4])  # remove .png
+
+#         valid_bases = set()
+
+#         for base in candidates:
+#             # Check for jpg
+#             if has_all_files(base, "jpg"):
+#                 valid_bases.add(base)
+#             # Check for png
+#             #elif has_all_files(base, "png"):
+#             #    valid_bases.add(base)
+
+#         # Sort base names before return
+#         return JSONResponse(content=sorted(valid_bases))
+
+#     except Exception as e:
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 from fastapi.responses import StreamingResponse
 import pandas as pd
@@ -1709,6 +1751,7 @@ def submit_batch_categorization(
         image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
 
         db_record = CropImageValidation(
+            image_filename = payload.image_filename,
             image_path=image_db_path, # This is the image's path in the database
             doctor_name=payload.doctor_name,
             comments=payload.comments,
@@ -1730,7 +1773,7 @@ def submit_batch_categorization(
             responses_to_return.append(
                 CropImageValidationResponse(
                     id=record.id,
-                    image_filename=os.path.basename(record.image_path), # Extract filename from image_path
+                    image_filename=os.path.basename(record.image_filename), # Extract filename from image_path
                     image_path=record.image_path,
                     doctor_name=record.doctor_name,
                     comments=record.comments,
@@ -1783,24 +1826,26 @@ async def create_new_categorization(
     # Create a new instance of the model with the data from the request
     # Note: 'id' and 'created_at' will be handled by the database (auto-increment/default)
     new_db_entry = DoctorImageValidation(
-        image_path=data.image_path, # These are crucial for the new entry
-        mask_path=data.mask_path,
+        image_path=None,#data.image_path, # These are crucial for the new entry
+        mask_path=None,#data.mask_path,
         crop_path=data.crop_path,
         crop_mask_path=data.crop_mask_path,
         doctor_name=data.doctor_name,
+        mask_rating = data.mask_rating,
         #rating=data.rating,
         comments=data.comments,
         mask_comments=data.mask_comments,
-        disease_name=data.disease_name,
-        category=data.category,
+        disease_name=None,#data.disease_name,
+        category=None,#data.category,
         real_generated=data.real_generated,
         realism_rating=data.realism_rating,
         image_precision=data.image_precision,
-        skin_color_precision=data.skin_color_precision,
+        skin_color_precision=None,#data.skin_color_precision,
         confidence_level=data.confidence_level,
-        crop_quality_rating=data.crop_quality_rating,
-        crop_diagnosis=data.crop_diagnosis,
-        fitzpatrick_scale=data.fitzpatrick_scale,
+        crop_quality_rating=None,#data.crop_quality_rating,
+        crop_diagnosis=None,#data.crop_diagnosis,
+        fitzpatrick_scale=None,#data.fitzpatrick_scale,
+        created_at=datetime.utcnow()
     )
 
     db.add(new_db_entry)

@@ -395,7 +395,7 @@
       if (allImageFilenames.length > 0) {
         displayCurrentBatch(); // Display the first batch
       } else {
-        messageContainer.textContent = 'No images found in the categorization queue.';
+        messageContainer.textContent = 'No more data available.';
         submitAllButton.disabled = true;
       }
     };
@@ -457,7 +457,7 @@
           // This loop primarily formats data for the backend and performs a final check.
           
           if (!data.doctor_name || !data.crop_diagnosis ) {
-              messageContainer.textContent = `Missing required data for image: ${filename}. Please ensure all global fields are selected.`;
+              messageContainer.textContent = `Missing required data for : ${filename}. Please ensure all fields are selected.`;
               validationError = true;
               break; 
           }

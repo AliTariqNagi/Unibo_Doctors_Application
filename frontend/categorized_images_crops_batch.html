@@ -69,24 +69,6 @@
         resize: vertical;
         min-height: 80px; /* Make global comments textarea larger */
     }
-    .global-fitzpatrick-scale {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: nowrap;
-      margin-top: 6px;
-      font-size: 0.9rem;
-    }
-    .global-fitzpatrick-scale span {
-      flex: 1;
-      text-align: center;
-    }
-    .global-fitzpatrick-scale input[type="radio"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-      margin: 0 3px;
-    }
 
     .images-grid {
       display: grid;
@@ -204,21 +186,16 @@
 
           <div>
               <label for="crop_diagnosis_global">Crop Diagnosed Disease (Applies to all images in the batch):</label>
+              <p class="question-description">Which skin disease do these crops represent?</p>
               <select id="crop_diagnosis_global" name="crop_diagnosis_global" required>
                   <option value="">-- Select Crop Diagnosis --</option>
-                  <option value="iatrogenic_drug_induced_exanthema">Iatrogenic drug induced exanthema</option>
                   <option value="maculopapular_exanthema">Maculopapular exanthema</option>
-                  <option value="morbilliform_exanthema">Morbilliform exanthema</option>
-                  <option value="polymorphous_exanthema">Polymorphous exanthema</option>
                   <option value="viral_exanthema">Viral exanthema</option>
-                  <option value="urticaria">Urticaria</option>
-                  <option value="pediculosis">Pediculosis</option>
                   <option value="scabies">Scabies</option>
-                  <option value="chickenpox">Chickenpox</option>
               </select>
           </div>
 
-          <div>
+          <!-- <div>
               <label>Fitzpatrick Skin Tone Classification (Applies to all images in the batch):</label>
               <div class="global-fitzpatrick-scale">
                   <span>Type I</span>
@@ -234,7 +211,7 @@
                   <span>Type VI</span>
                   <input type="radio" id="fitzpatrick_VI_global" name="fitzpatrick_scale_global" value="VI" />
               </div>
-          </div>
+          </div> -->
 
           <div>
               <label for="comments_global">Comments (Applies to all images in the batch):</label>
@@ -254,10 +231,10 @@
       </div>
     </form>
     
-    <div class="fitzpatrick-image-container">
+    <!-- <div class="fitzpatrick-image-container">
       <p style="font-weight: 600; color: #34495e; margin-bottom: 10px;">Fitzpatrick Skin Tone Reference:</p>
       <img src="/images/fitzpatrick.jpg" alt="Fitzpatrick Scale" />
-    </div>
+    </div> -->
 
     <div id="message-container"></div>
   </div>
@@ -268,7 +245,7 @@
 
     const doctorNameGlobalSelect = document.getElementById('doctor_name_global');
     const cropDiagnosisGlobalSelect = document.getElementById('crop_diagnosis_global');
-    const fitzpatrickRadiosGlobal = document.querySelectorAll('input[name="fitzpatrick_scale_global"]');
+    //const fitzpatrickRadiosGlobal = document.querySelectorAll('input[name="fitzpatrick_scale_global"]');
     const commentsGlobalTextarea = document.getElementById('comments_global'); // New global comments textarea
 
     const imagesDisplayArea = document.getElementById('images-display-area');
@@ -307,7 +284,7 @@
                     doctor_name: '',
                     comments: '',
                     crop_diagnosis: '',
-                    fitzpatrick_scale: ''
+                    //fitzpatrick_scale: ''
                 };
             }
         });
@@ -349,7 +326,7 @@
 
         const globalDoctorName = doctorNameGlobalSelect.value;
         const globalCropDiagnosis = cropDiagnosisGlobalSelect.value;
-        const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
+        //const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
         const globalComments = commentsGlobalTextarea.value; // Get global comments
 
         currentBatchFilenames.forEach(filename => {
@@ -357,7 +334,7 @@
                 allCategorizationsData[filename].doctor_name = globalDoctorName;
                 allCategorizationsData[filename].comments = globalComments; // Apply global comments
                 allCategorizationsData[filename].crop_diagnosis = globalCropDiagnosis;
-                allCategorizationsData[filename].fitzpatrick_scale = globalFitzpatrickScale;
+                //allCategorizationsData[filename].fitzpatrick_scale = globalFitzpatrickScale;
             }
         });
     }
@@ -387,9 +364,9 @@
         cropDiagnosisGlobalSelect.value = firstImageData.crop_diagnosis || '';
         commentsGlobalTextarea.value = firstImageData.comments || ''; // Populate global comments
 
-        fitzpatrickRadiosGlobal.forEach(radio => {
-            radio.checked = (radio.value === firstImageData.fitzpatrick_scale);
-        });
+        // fitzpatrickRadiosGlobal.forEach(radio => {
+        //     radio.checked = (radio.value === firstImageData.fitzpatrick_scale);
+        // });
 
         batchFilenames.forEach(filename => {
             const imageItemDiv = document.createElement('div');
@@ -446,7 +423,7 @@
 
       const doctorName = doctorNameGlobalSelect.value;
       const globalCropDiagnosis = cropDiagnosisGlobalSelect.value;
-      const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
+      //const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
       // No need to get global comments here as it's already applied by saveCurrentBatchCategorization
 
       // Perform validation for all global required fields
@@ -458,10 +435,10 @@
           messageContainer.textContent = "Please select a Crop Diagnosed Disease before submitting all categorizations.";
           return;
       }
-      if (!globalFitzpatrickScale) {
-          messageContainer.textContent = "Please select a Fitzpatrick Skin Tone Classification before submitting all categorizations.";
-          return;
-      }
+      // if (!globalFitzpatrickScale) {
+      //     messageContainer.textContent = "Please select a Fitzpatrick Skin Tone Classification before submitting all categorizations.";
+      //     return;
+      // }
       // If comments are mandatory, add validation here:
       // if (!commentsGlobalTextarea.value.trim()) {
       //     messageContainer.textContent = "Please add comments before submitting all categorizations.";
@@ -479,7 +456,7 @@
           // These global values should already be applied to `data` via saveCurrentBatchCategorization.
           // This loop primarily formats data for the backend and performs a final check.
           
-          if (!data.doctor_name || !data.crop_diagnosis || !data.fitzpatrick_scale) {
+          if (!data.doctor_name || !data.crop_diagnosis ) {
               messageContainer.textContent = `Missing required data for image: ${filename}. Please ensure all global fields are selected.`;
               validationError = true;
               break; 
@@ -489,7 +466,7 @@
               doctor_name: data.doctor_name,
               comments: data.comments,
               crop_diagnosis: data.crop_diagnosis,
-              fitzpatrick_scale: data.fitzpatrick_scale
+              //fitzpatrick_scale: data.fitzpatrick_scale
           });
       }
 

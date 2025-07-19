@@ -112,6 +112,7 @@
             </div>
             <div>
                 <label for="global-diagnosis-rating">Crop Diagnosis (All Images):</label>
+                <p class="question-description">Which skin disease is represented in these images?</p>
                 <select id="global-diagnosis-rating" required>
                     <option value="">Select diagnosis</option>
                     <option value="Iatrogenic drug induced exanthema">Iatrogenic drug induced exanthema</option>
@@ -206,7 +207,7 @@
                     imageGrid.innerHTML = ""; // Clear previous images
 
                     if (images.length === 0) {
-                        imageGrid.textContent = "No more unrated images found for validation at this time!";
+                        imageGrid.textContent = "";
                         submitAndNextButton.disabled = true;
                         statusMessage.textContent = "All available images have been validated.";
                         statusMessage.classList.add("message");

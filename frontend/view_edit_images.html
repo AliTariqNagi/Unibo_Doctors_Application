@@ -11,72 +11,168 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            background-color: #f8f8f8;
+            min-height: 100vh;
         }
         h1 {
             margin-bottom: 20px;
+            color: #333;
         }
         .image-container {
             display: flex;
             justify-content: center;
             margin-bottom: 20px;
             gap: 20px;
+            flex-wrap: wrap; /* Allow images to wrap on smaller screens */
+        }
+        .image-container > div {
+            text-align: center;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .image-container img {
-            max-width: 40%;
+            max-width: 300px; /* Max width for images */
+            width: 100%; /* Ensure responsiveness */
             height: auto;
             border: 1px solid #ddd;
             border-radius: 5px;
+            object-fit: contain; /* Ensures image fits without cropping */
+            min-height: 150px; /* Give a minimum height for placeholder */
+            background-color: #e9e9e9; /* Background for placeholder */
         }
         .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden; /* Ensures rounded corners on table */
         }
         .data-table th,
         .data-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 10px;
             text-align: left;
+            font-size: 0.9em;
         }
         .data-table th {
-            background-color: #f0f0f0;
+            background-color: #e0e0e0;
+            color: #555;
+            font-weight: bold;
         }
         .data-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
         .editable {
             background-color: #fff;
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 1px solid #ccc;
+            padding: 6px;
             border-radius: 4px;
             box-sizing: border-box;
             width: 100%;
+            font-size: 0.9em;
         }
         .editable:focus {
             outline: none;
             border-color: #007bff;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+        }
+        textarea.editable {
+            resize: vertical;
+            min-height: 50px;
+        }
+        select.editable {
+            padding: 6px;
+        }
+        /* Styles for radio groups */
+        .radio-group-inline {
+            display: flex;
+            flex-direction: column; /* Changed to column for better readability in table cells */
+            gap: 5px; /* Reduced gap */
+            align-items: flex-start; /* Align radios to the left */
+            flex-wrap: nowrap; /* Prevent wrapping in most cases */
+        }
+        .radio-group-inline input[type="radio"] {
+            margin-right: 5px;
+            flex-shrink: 0; /* Prevent radio button from shrinking */
+        }
+        .radio-group-inline label {
+            font-weight: normal; /* Override default label bold */
+            margin-bottom: 0;
+            display: flex; /* Use flex for label content to align radio button and text */
+            align-items: center;
+            gap: 5px;
+            line-height: 1.2; /* Adjust line height for dense options */
+            font-size: 0.85em; /* Slightly smaller font for options */
         }
         .action-buttons {
             display: flex;
             gap: 5px;
             align-items: center;
         }
+        .action-buttons button {
+            padding: 6px 10px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s ease;
+        }
+        .save-new-entry-button {
+            background-color: #28a745;
+            color: white;
+        }
+        .save-new-entry-button:hover {
+            background-color: #218838;
+        }
         .pagination-buttons {
             margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .pagination-buttons button {
             padding: 8px 15px;
-            margin: 0 5px;
             cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s ease;
+        }
+        .pagination-buttons button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .pagination-buttons button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
         #message-container {
             margin-top: 10px;
             font-weight: bold;
+            color: #28a745;
         }
         #error-container {
             color: red;
             margin-top: 10px;
+        }
+        .home-button {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            padding: 10px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-decoration: none;
+            width: 120px;
+            transition: background-color 0.3s ease;
+        }
+        .home-button:hover {
+            background-color: #e0e0e0;
         }
     </style>
 </head>
@@ -84,13 +180,15 @@
     <h1>View/Edit Image Details</h1>
 
     <div class="image-container">
-        <div style="text-align: center;">
-            <img id="current-original-image" src="" alt="Original Image" style="max-width: 300px; height: auto;">
-            <p>Original Image</p>
+        <div>
+            <img id="current-crop-image" src="" alt="Crop Image" 
+                 onerror="this.onerror=null;this.src='https://placehold.co/300x200/e0e0e0/555555?text=No+Crop+Image+Found';">
+            <p>Crop Image</p>
         </div>
-        <div style="text-align: center;">
-            <img id="current-mask-image" src="" alt="Mask Image" style="max-width: 300px; height: auto;">
-            <p>Mask Image</p>
+        <div>
+            <img id="current-crop-mask-image" src="" alt="Crop Mask Image" 
+                 onerror="this.onerror=null;this.src='https://placehold.co/300x200/e0e0e0/555555?text=No+Crop+Mask+Image';">
+            <p>Crop Mask Image</p>
         </div>
     </div>
 
@@ -101,39 +199,34 @@
                 <th>Doctor's Name</th>
                 <th>Comments</th>
                 <th>Mask Comments</th>
-                <th>Disease Name</th>
-                <th>Category</th>
-                <th>Years of Experience</th>
+                <th>Mask Accuracy</th>
                 <th>Real/Generated</th>
                 <th>Realism Rating</th>
                 <th>Image Precision</th>
-                <th>Skin Color Precision</th>
                 <th>Confidence Level</th>
-                <th>Crop Quality Rating</th>
-                <th>Crop Diagnosis</th>
-                <th>Fitzpatrick Scale</th>
                 <th>Created At</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody id="data-table-body">
+            <!-- Data will be populated here -->
         </tbody>
     </table>
 
     <div class="pagination-buttons">
         <button id="prev-button" disabled>Previous</button>
-        <span id="current-page">Page 1</span>
+        <span id="current-page">Page 0 of 0</span>
         <button id="next-button" disabled>Next</button>
     </div>
 
     <div id="message-container"></div>
     <div id="error-container"></div>
 
-    <a href="/" class="home-button" style="display: block; margin-top: 20px; text-align: center; padding: 10px; background-color: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 5px; text-decoration: none; width: 100px;">Home</a>
+    <a href="/" class="home-button">Home</a>
 
     <script>
-        const currentOriginalImage = document.getElementById('current-original-image');
-        const currentMaskImage = document.getElementById('current-mask-image');
+        const currentCropImage = document.getElementById('current-crop-image');
+        const currentCropMaskImage = document.getElementById('current-crop-mask-image');
         const dataTableBody = document.getElementById('data-table-body');
         const prevButton = document.getElementById('prev-button');
         const nextButton = document.getElementById('next-button');
@@ -150,18 +243,47 @@
             const hasNext = currentIndex < allCategorizations.length - 1;
             prevButton.disabled = !hasPrev;
             nextButton.disabled = !hasNext;
-            currentPageSpan.textContent = `Page ${currentIndex + 1} of ${allCategorizations.length}`;
+            currentPageSpan.textContent = `Page ${allCategorizations.length > 0 ? currentIndex + 1 : 0} of ${allCategorizations.length}`;
 
             if (allCategorizations.length > 0) {
                 const currentEntry = allCategorizations[currentIndex];
-                currentOriginalImage.src = `${backendUrl}/${currentEntry.image_path}`;
-                currentOriginalImage.alt = `Original Image ${currentEntry.image_path}`;
-                currentMaskImage.src = `${backendUrl}/${currentEntry.mask_path}`;
-                currentMaskImage.alt = `Mask Image ${currentEntry.mask_path}`;
+                
+                // Use URL constructor for robust path joining
+                let cropImagePath = '';
+                if (currentEntry.crop_path) {
+                    try {
+                        cropImagePath = new URL(currentEntry.crop_path, backendUrl).href;
+                    } catch (e) {
+                        console.error("Error constructing crop image URL:", e, "Path:", currentEntry.crop_path);
+                        cropImagePath = ''; // Fallback to empty string to trigger onerror
+                    }
+                }
+
+                let cropMaskImagePath = '';
+                if (currentEntry.crop_mask_path) {
+                    try {
+                        cropMaskImagePath = new URL(currentEntry.crop_mask_path, backendUrl).href;
+                    } catch (e) {
+                        console.error("Error constructing crop mask URL:", e, "Path:", currentEntry.crop_mask_path);
+                        cropMaskImagePath = ''; // Fallback to empty string to trigger onerror
+                    }
+                }
+                
+                console.log("Attempting to load Crop Image from:", cropImagePath);
+                console.log("Attempting to load Crop Mask Image from:", cropMaskImagePath);
+
+                currentCropImage.src = cropImagePath || 'https://placehold.co/300x200/e0e0e0/555555?text=No+Crop+Image+Found';
+                currentCropImage.alt = `Crop Image ${currentEntry.image_name || 'N/A'}`;
+                
+                currentCropMaskImage.src = cropMaskImagePath || 'https://placehold.co/300x200/e0e0e0/555555?text=No+Crop+Mask+Image';
+                currentCropMaskImage.alt = `Crop Mask Image ${currentEntry.mask_name || 'N/A'}`;
+
                 populateTable(currentEntry);
             } else {
-                currentOriginalImage.src = '';
-                currentMaskImage.src = '';
+                currentCropImage.src = 'https://placehold.co/300x200/e0e0e0/555555?text=No+Images+Available';
+                currentCropImage.alt = 'No Images Available';
+                currentCropMaskImage.src = 'https://placehold.co/300x200/e0e0e0/555555?text=No+Images+Available';
+                currentCropMaskImage.alt = 'No Images Available';
                 dataTableBody.innerHTML = '';
                 currentPageSpan.textContent = 'No images found';
                 prevButton.disabled = true;
@@ -174,32 +296,64 @@
             if (entry) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${entry.id}</td>
+                    <td>${entry.id || ''}</td>
                     <td><input type="text" value="${entry.doctor_name || ''}" class="editable" data-field="doctor_name" data-id="${entry.id}"></td>
                     <td><textarea class="editable" data-field="comments" data-id="${entry.id}">${entry.comments || ''}</textarea></td>
                     <td><textarea class="editable" data-field="mask_comments" data-id="${entry.id}">${entry.mask_comments || ''}</textarea></td>
-                    <td><input type="text" value="${entry.disease_name || ''}" class="editable" data-field="disease_name" data-id="${entry.id}"></td>
                     <td>
-                        <select class="editable" data-field="category" data-id="${entry.id}">
-                            <option value="disease" ${entry.category === 'disease' ? 'selected' : ''}>Disease</option>
-                            <option value="non-disease" ${entry.category === 'non-disease' ? 'selected' : ''}>Non-Disease</option>
-                        </select>
+                        <div class="radio-group-inline" data-field="mask_rating" data-id="${entry.id}">
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="1" ${entry.mask_rating === 1 ? 'checked' : ''}>1- Very Inaccurate – The mask does not correspond to the affected area at all</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="2" ${entry.mask_rating === 2 ? 'checked' : ''}>2 - Inaccurate – The mask includes large errors (e.g., misses key lesions or marks healthy skin)</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="3" ${entry.mask_rating === 3 ? 'checked' : ''}>3 - Somewhat Inaccurate – Several noticeable inaccuracies; substantial corrections needed</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="4" ${entry.mask_rating === 4 ? 'checked' : ''}>4 - Neutral – Mask is acceptable but contains minor inaccuracies</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="5" ${entry.mask_rating === 5 ? 'checked' : ''}>5 - Somewhat Accurate – Mostly correct, with a few small issues</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="6" ${entry.mask_rating === 6 ? 'checked' : ''}>6 - Accurate – Correctly outlines nearly all affected areas</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="7" ${entry.mask_rating === 7 ? 'checked' : ''}>7 - Very Accurate – Precisely delineates all visible diseased areas</label>
+                        </div>
                     </td>
-                    <td><input type="number" value="${entry.years_of_experience || ''}" class="editable" data-field="years_of_experience" data-id="${entry.id}"></td>
                     <td>
                         <select class="editable" data-field="real_generated" data-id="${entry.id}">
-                            <option value="real" ${entry.real_generated === 'real' ? 'selected' : ''}>Real</option>
-                            <option value="generated" ${entry.real_generated === 'generated' ? 'selected' : ''}>Generated</option>
+                            <option value="Real" ${entry.real_generated === 'Real' ? 'selected' : ''}>Real</option>
+                            <option value="Generated" ${entry.real_generated === 'Generated' ? 'selected' : ''}>Generated</option>
                         </select>
                     </td>
-                    <td><input type="number" value="${entry.realism_rating || ''}" class="editable" data-field="realism_rating" data-id="${entry.id}"></td>
-                    <td><input type="text" value="${entry.image_precision || ''}" class="editable" data-field="image_precision" data-id="${entry.id}"></td>
-                    <td><input type="number" value="${entry.skin_color_precision || ''}" class="editable" data-field="skin_color_precision" data-id="${entry.id}"></td>
-                    <td><input type="number" value="${entry.confidence_level || ''}" class="editable" data-field="confidence_level" data-id="${entry.id}"></td>
-                    <td><input type="number" value="${entry.crop_quality_rating || ''}" class="editable" data-field="crop_quality_rating" data-id="${entry.id}"></td>
-                    <td><input type="text" value="${entry.crop_diagnosis || ''}" class="editable" data-field="crop_diagnosis" data-id="${entry.id}"></td>
-                    <td><input type="text" value="${entry.fitzpatrick_scale || ''}" class="editable" data-field="fitzpatrick_scale" data-id="${entry.id}"></td>
-                    <td>${new Date(entry.created_at).toLocaleString()}</td>
+                    <td>
+                        <div class="radio-group-inline" data-field="realism_rating" data-id="${entry.id}">
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="1" ${entry.realism_rating === 1 ? 'checked' : ''}>1 - not at all realistic</label>
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="2" ${entry.realism_rating === 2 ? 'checked' : ''}>2 – slightly realistic</label>
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="3" ${entry.realism_rating === 3 ? 'checked' : ''}>3 – somewhat unrealistic</label>
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="4" ${entry.realism_rating === 4 ? 'checked' : ''}>4 – neutral/uncertain</label>
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="5" ${entry.realism_rating === 5 ? 'checked' : ''}>5 – somewhat realistic</label>
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="6" ${entry.realism_rating === 6 ? 'checked' : ''}>6 – mostly realistic</label>
+                            <label><input type="radio" name="realism_rating_${entry.id}" value="7" ${entry.realism_rating === 7 ? 'checked' : ''}>7 – completely realistic</label>
+                        </div>
+                    </td>
+                    <td>
+                        <select class="editable" data-field="image_precision" data-id="${entry.id}">
+                            <option value="">-- Select Disease --</option>
+                            <option value="iatrogenic_drug_induced_exanthema" ${entry.image_precision === 'iatrogenic_drug_induced_exanthema' ? 'selected' : ''}>Iatrogenic drug induced exanthema</option>
+                            <option value="maculopapular_exanthema" ${entry.image_precision === 'maculopapular_exanthema' ? 'selected' : ''}>Maculopapular exanthema</option>
+                            <option value="morbilliform_exanthema" ${entry.image_precision === 'morbilliform_exanthema' ? 'selected' : ''}>Morbilliform exanthema</option>
+                            <option value="polymorphous_exanthema" ${entry.image_precision === 'polymorphous_exanthema' ? 'selected' : ''}>Polymorphous exanthema</option>
+                            <option value="viral_exanthema" ${entry.image_precision === 'viral_exanthema' ? 'selected' : ''}>Viral exanthema</option>
+                            <option value="urticaria" ${entry.image_precision === 'urticaria' ? 'selected' : ''}>Urticaria</option>
+                            <option value="pediculosis" ${entry.image_precision === 'pediculosis' ? 'selected' : ''}>Pediculosis</option>
+                            <option value="scabies" ${entry.image_precision === 'scabies' ? 'selected' : ''}>Scabies</option>
+                            <option value="chickenpox" ${entry.image_precision === 'chickenpox' ? 'selected' : ''}>Chickenpox</option>
+                        </select>
+                    </td>
+                    <td>
+                        <div class="radio-group-inline" data-field="confidence_level" data-id="${entry.id}">
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="1" ${entry.confidence_level === 1 ? 'checked' : ''}>1 – Not at all confident</label>
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="2" ${entry.confidence_level === 2 ? 'checked' : ''}>2 – Slightly confident</label>
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="3" ${entry.confidence_level === 3 ? 'checked' : ''}>3 - Somewhat unconfident</label>
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="4" ${entry.confidence_level === 4 ? 'checked' : ''}>4 – Neutral/unsure</label>
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="5" ${entry.confidence_level === 5 ? 'checked' : ''}>5 – Somewhat confident</label>
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="6" ${entry.confidence_level === 6 ? 'checked' : ''}>6 – Mostly confident</label>
+                            <label><input type="radio" name="confidence_level_${entry.id}" value="7" ${entry.confidence_level === 7 ? 'checked' : ''}>7 – Extremely confident</label>
+                        </div>
+                    </td>
+                    <td>${entry.created_at ? new Date(entry.created_at).toLocaleString() : ''}</td>
                     <td class="action-buttons">
                         <button class="save-new-entry-button" data-id="${entry.id}">Save as New</button>
                     </td>
@@ -212,9 +366,47 @@
                         const originalId = button.dataset.id;
                         const updatedFields = {};
                         const row = button.closest('tr');
+                        
+                        // Iterate over all editable inputs (text, number, select)
                         row.querySelectorAll('.editable[data-id="' + originalId + '"]').forEach(input => {
-                            updatedFields[input.dataset.field] = input.type === 'number' ? parseFloat(input.value) : input.value;
+                            let value = input.value;
+                            if (input.type === 'number') {
+                                value = value === '' ? null : parseFloat(value);
+                            } else if (value === '') {
+                                value = null; // Treat empty strings as null for optional text fields
+                            }
+                            updatedFields[input.dataset.field] = value;
                         });
+
+                        // Special handling for real_generated (it's a select now, not radio buttons in this file)
+                        // This part was previously for radio buttons, but in this file, it's a select again.
+                        // So, we just get the value directly from the select element.
+                        const realGeneratedSelect = row.querySelector(`select.editable[data-field="real_generated"][data-id="${originalId}"]`);
+                        if (realGeneratedSelect) {
+                            updatedFields['real_generated'] = realGeneratedSelect.value;
+                        }
+
+                        // Special handling for mask_rating (radio group)
+                        const maskRatingRadioGroup = row.querySelector(`.radio-group-inline[data-field="mask_rating"][data-id="${originalId}"]`);
+                        if (maskRatingRadioGroup) {
+                            const checkedRadio = maskRatingRadioGroup.querySelector('input[name^="mask_rating_"]:checked');
+                            updatedFields['mask_rating'] = checkedRadio ? Number(checkedRadio.value) : null;
+                        }
+
+                        // Special handling for realism_rating (radio group)
+                        const realismRatingRadioGroup = row.querySelector(`.radio-group-inline[data-field="realism_rating"][data-id="${originalId}"]`);
+                        if (realismRatingRadioGroup) {
+                            const checkedRadio = realismRatingRadioGroup.querySelector('input[name^="realism_rating_"]:checked');
+                            updatedFields['realism_rating'] = checkedRadio ? Number(checkedRadio.value) : null;
+                        }
+
+                        // Special handling for confidence_level (radio group)
+                        const confidenceLevelRadioGroup = row.querySelector(`.radio-group-inline[data-field="confidence_level"][data-id="${originalId}"]`);
+                        if (confidenceLevelRadioGroup) {
+                            const checkedRadio = confidenceLevelRadioGroup.querySelector('input[name^="confidence_level_"]:checked');
+                            updatedFields['confidence_level'] = checkedRadio ? Number(checkedRadio.value) : null;
+                        }
+
 
                         // Add the original image_path and mask_path to the payload
                         const originalEntry = allCategorizations.find(item => item.id == originalId);
@@ -223,15 +415,16 @@
                             updatedFields['mask_path'] = originalEntry.mask_path;
                             updatedFields['crop_path'] = originalEntry.crop_path;
                             updatedFields['crop_mask_path'] = originalEntry.crop_mask_path;
+                            updatedFields['disease_name'] = updatedFields['image_precision'];
                         }
 
 
                         fetch(`${backendUrl}/create_new_categorization/`, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json', // Change to application/json
+                                'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(updatedFields), // Stringify the JSON object
+                            body: JSON.stringify(updatedFields),
                         })
                         .then(response => {
                             if (!response.ok) {
@@ -254,7 +447,7 @@
                     });
                 });
             } else {
-                dataTableBody.innerHTML = '<tr><td colspan="17">No data available for this image.</td></tr>';
+                dataTableBody.innerHTML = '<tr><td colspan="11">No data available for this image.</td></tr>';
             }
         }
 
@@ -273,7 +466,7 @@
                 })
                 .catch(error => {
                     console.error('Error fetching all categorizations:', error);
-                    errorContainer.textContent = 'Failed to load categorizations.';
+                    errorContainer.textContent = 'Failed to load categorizations. Please ensure the backend is running and the /all_categorizations/ route returns valid data.';
                     messageContainer.textContent = '';
                 });
         }

@@ -1,6 +1,6 @@
 # Categorize_images.html
 ## Dependencies
 ### `${backendUrl}/images/categorized_images/${baseName}${suffix}.jpg`;
-### `${backendUrl}/get_all_base_names`
+### `${backendUrl}/get_all_base_names`   ---------- DONE
 ### `${backendUrl}/doctors/`
 ### `${backendUrl}/skin_disease_image/update/${encodeURIComponent(baseName)}`

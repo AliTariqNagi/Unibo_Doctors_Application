@@ -1502,8 +1502,8 @@ async def get_all_base_names():
 
         return JSONResponse(content=sorted(base_names_set))
 
-    except Exception as error:
-        return JSONResponse(content={"error": str(error)}, status_code=500)
+    except Exception as error_:
+        return JSONResponse(content={"error": str(error_)}, status_code=500)
 
 #################--------------------------------------------------------------------------------------------------##########################
 

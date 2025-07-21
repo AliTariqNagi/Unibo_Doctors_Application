@@ -1471,41 +1471,86 @@ router = APIRouter()
 IMAGE_DIR = "/images/categorized_images"
 
 
-import io
-import os
-import pandas as pd
-from fastapi.responses import JSONResponse
-from fastapi.responses import StreamingResponse
 
 
-
-################ -------------------------------------   CATEGRIZE IMAGES MODULE --------------------------------########################
 STATIC_DIR = "images"
 SKIN_DISEASE_CROPS_IMAGES_DIRECTORY_PATH = os.path.join(STATIC_DIR, "categorized_images")
 os.makedirs(SKIN_DISEASE_CROPS_IMAGES_DIRECTORY_PATH, exist_ok=True)
 
-# CATEGORIZE IMAGES (CATEGORIZE_IMAGES.HTML)
+import os
+from fastapi.responses import JSONResponse
+
+
 @app.get("/get_all_base_names")
 async def get_all_base_names():
     try:
         files_list = os.listdir(SKIN_DISEASE_CROPS_IMAGES_DIRECTORY_PATH)
         files_set = set(files_list)
 
-        base_names_set = set()
+        bases_set = set()
 
         for file_ in files_list:
             if file_.endswith("_crop.jpg"):
-                base_name = file_.replace("_crop.jpg", "")
-                crop_mask = f"{base_name}_crop_mask.jpg"
+                base = file_.replace("_crop.jpg", "")
+                crop_mask = f"{base}_crop_mask.jpg"
                 if crop_mask in files_set:
-                    base_names_set.add(base_name)
+                    bases_set.add(base)
 
-        return JSONResponse(content=sorted(base_names_set))
+        return JSONResponse(content=sorted(bases_set))
 
     except Exception as error:
         return JSONResponse(content={"error": str(error)}, status_code=500)
 
-#################--------------------------------------------------------------------------------------------------##########################
+
+
+# @app.get("/get_all_base_names")
+# async def get_all_base_names():
+#     try:
+#         files = os.listdir(IMAGE_NAMES_DIR)
+#         # Collect all filenames without extensions for jpg and png separately
+#         jpg_files = set(f for f in files if f.endswith(".jpg"))
+#         png_files = set(f for f in files if f.endswith(".png"))
+
+#         base_names = set()
+
+#         # Define suffixes we need to check for each base
+#         suffixes = ["_crop", "_crop_mask"]
+
+#         # Checks for a single file if all the suffixes exist
+#         def has_all_files(base, ext):
+#             for suffix in suffixes:
+#                 if f"{base}{suffix}.{ext}" not in files:
+#                     return False
+#             return True
+
+#         # Iterate over all files and extract possible bases
+#         candidates = set()
+#         for f in files:
+#             if f.endswith(".jpg"):
+#                 candidates.add(f[:-4])  # remove .jpg
+#             #elif f.endswith(".png"):
+#             #    candidates.add(f[:-4])  # remove .png
+
+#         valid_bases = set()
+
+#         for base in candidates:
+#             # Check for jpg
+#             if has_all_files(base, "jpg"):
+#                 valid_bases.add(base)
+#             # Check for png
+#             #elif has_all_files(base, "png"):
+#             #    valid_bases.add(base)
+
+#         # Sort base names before return
+#         return JSONResponse(content=sorted(valid_bases))
+
+#     except Exception as e:
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+from fastapi.responses import StreamingResponse
+import pandas as pd
+import io
+
 
 
 @app.get("/get_image_set/{image_name}")

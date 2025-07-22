@@ -1,11 +1,5 @@
-import os
-from enum import Enum
-from datetime import datetime
-from typing import Optional, List
 from sqlalchemy.orm import sessionmaker
-from pydantic import BaseModel, EmailStr
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func
-
 
 # sqlalchemy to connect with the Postgresql
 # it is essential to create an engine object, that serves as a central source of connection by providing a connection pool 
@@ -15,7 +9,29 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, f
 # The Engine establishes a real DBAPI connection to the database when a method like Engine.execute() or Engine.connect() is called.
 engine = create_engine("postgresql://admin:admin@localhost/doctor_image_validation")
 
+
+# In order to interact with the database, we need to obtain its handle. A session object is the handle to database. 
+# Session class is defined using sessionmaker() a configurable session factory method which is bound to the engine object created earlier.
+# from sqlalchemy.orm import sessionmaker
+# Session = sessionmaker(bind = engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# The session object is then set up using its default constructor as follows −
+# session = Session()
+
+# Some of the frequently required methods of session class are listed below −
+# 1	begin() begins a transaction on this session
+# 2	add() places an object in the session. Its state is persisted in the database on next flush operation
+# 3	add_all() adds a collection of objects to the session
+# 4 commit() flushes all items and any transaction in progress
+# 5	delete() marks a transaction as deleted
+# 6	execute() executes a SQL expression
+# 7	expire() marks attributes of an instance as out of date
+# 8	flush() flushes all object changes to the database
+# 9	invalidate() closes the session using connection invalidation
+# 10 rollback() rolls back the current transaction in progress
+# 11 close() Closes current session by clearing all items and ending any transaction in progress
+
 
 # the configurational process starts by describing the database tables and then by defining classes which will be mapped to those tables
 #In SQLAlchemy, these two tasks are performed together. This is done by using Declarative system; the classes created include directives 

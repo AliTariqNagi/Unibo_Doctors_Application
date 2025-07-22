@@ -4,8 +4,8 @@ import shutil
 import pandas as pd
 import logging
 import random
-from datetime import datetime, timezone # <--- Change UTC to timezone
-
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Depends, Form, Query
 from fastapi import status
@@ -667,60 +667,6 @@ async def get_skin_disease_image(image_id: int, db: Session = Depends(get_db)):
     return image
 
 
-# # --- Routes for skin tone classification ---
-# @app.get("/patient_images/{persona_digits}", response_model=List[SkinDiseaseImageResponse])
-# async def get_patient_images_for_classification(persona_digits: str, db: Session = Depends(get_db)):
-#     images = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.persona_digits == persona_digits).all()
-#     if not images:
-#         raise HTTPException(status_code=404, detail=f"No images found for patient {persona_digits}")
-#     return images
-
-# @app.post("/classify_skin_tone/{persona_digits}")
-# async def classify_skin_tone(persona_digits: str, fitzpatrick_scale: str = Form(...), db: Session = Depends(get_db)):
-#     images = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.persona_digits == persona_digits).all()
-#     if not images:
-#         raise HTTPException(status_code=404, detail=f"No images found for patient {persona_digits}")
-#     for image in images:
-#         image.fitzpatrick_scale = fitzpatrick_scale
-#     db.commit()
-#     return {"message": f"Skin tone for patient {persona_digits} classified as {fitzpatrick_scale}."}
-
-# --- (Optional) Route to get unique persona digits for classification UI ---
-# @app.get("/unique_patients/", response_model=List[str])
-# async def get_unique_patients(db: Session = Depends(get_db)):
-#     unique_personas = db.query(SkinDiseaseImage.persona_digits).distinct().all()
-#     return [persona[0] for persona in unique_personas if persona[0] is not None]
-
-# from app.schemas import PatientImageMetadata
-
-# # --- NEW ROUTE: Get Images for a Specific Patient ID ---
-# @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
-# async def get_patient_images(persona_digits: str, db: Session = Depends(get_db)): # Added db dependency
-#     """
-#     Retrieves all image and mask paths for a given patient ID (persona_digits) from the database.
-#     """
-#     # Query SkinDiseaseImage table for all images associated with this persona_digits
-#     images_from_db = db.query(SkinDiseaseImage).filter(
-#         SkinDiseaseImage.persona_digits == persona_digits
-#     ).all()
-
-#     if not images_from_db:
-#         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient in the database.")
-
-#     images_data = []
-#     for img_entry in images_from_db:
-#         images_data.append(PatientImageMetadata(
-#             image_path=img_entry.image_path, # Assuming this is a full URL path like /images/... or /skin_disease_data/...
-#             image_name=img_entry.image_name,
-#             mask_path=img_entry.mask_path,
-#             mask_name=img_entry.mask_name
-#         ))
-    
-#     # Sort the images for consistent display, e.g., by image_name
-#     images_data.sort(key=lambda x: x.image_name) 
-    
-#     return images_data
-
 
 # --- UPDATED ROUTE: Get Unique Patient IDs for Skin Tone Classification (with validation filter) ---
 @app.get("/unique_patients/", response_model=List[str])
@@ -1180,100 +1126,6 @@ async def update_image_fields(image_id: int, update_data: UpdateImageFields, db:
     db.refresh(image)
     return {"message": "Image updated successfully"}
 
-# import os
-# import shutil
-# from fastapi import HTTPException
-
-# IMAGE_ROOT = "images"  # root images folder
-# DISEASE_FOLDER = os.path.join(IMAGE_ROOT, "disease")
-# NON_DISEASE_FOLDER = os.path.join(IMAGE_ROOT, "non-disease")
-
-# def get_unique_filename(dir_path: str, filename: str) -> str:
-#     """
-#     If filename exists in dir_path, append suffix _1, _2, etc. until unique.
-#     """
-#     base, ext = os.path.splitext(filename)
-#     candidate = filename
-#     count = 1
-#     while os.path.exists(os.path.join(dir_path, candidate)):
-#         candidate = f"{base}_{count}{ext}"
-#         count += 1
-#     return candidate
-
-# @app.post("/skin_disease_image/update/{image_name}", response_model=SkinDiseaseImageResponse)
-# def update_skin_disease_image_post(
-#     image_name: str,
-#     payload: DoctorImageValidationUpdateRequest,
-#     db: Session = Depends(get_db)
-# ):
-#     db_record = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.image_name == image_name).first()
-#     if not db_record:
-#         raise HTTPException(status_code=404, detail="Image record not found")
-
-#     update_data = payload.dict(exclude_unset=True)  # update only fields sent
-
-#     # Update DB fields first
-#     for key, value in update_data.items():
-#         setattr(db_record, key, value)
-
-#     # Decide target folder based on category
-#     category = update_data.get("category")
-#     if category not in ("disease", "non-disease"):
-#         raise HTTPException(status_code=400, detail="Category must be 'disease' or 'non-disease'")
-
-#     target_folder = DISEASE_FOLDER if category == "disease" else NON_DISEASE_FOLDER
-
-#     # Ensure target folder exists
-#     os.makedirs(target_folder, exist_ok=True)
-
-#     # Prepare old image filenames and their current paths
-#     # Use image_name as base for constructing others
-#     base_name, ext = os.path.splitext(image_name)
-#     old_paths = {
-#         "image_path": os.path.join(IMAGE_ROOT, db_record.image_path) if db_record.image_path else None,
-#         "mask_path": os.path.join(IMAGE_ROOT, db_record.mask_path) if db_record.mask_path else None,
-#         "crop_image_path": os.path.join(IMAGE_ROOT, db_record.crop_image_path) if db_record.crop_image_path else None,
-#         "crop_mask_path": os.path.join(IMAGE_ROOT, db_record.crop_mask_path) if db_record.crop_mask_path else None,
-#     }
-
-#     # New file names dictionary
-#     new_filenames = {}
-
-#     # Define expected suffixes for each image type
-#     suffix_map = {
-#         "image_path": "",  # original
-#         "mask_path": "_mask",
-#         "crop_image_path": "_crop",
-#         "crop_mask_path": "_crop_mask",
-#     }
-
-#     # Move and rename files if they exist
-#     for field, old_full_path in old_paths.items():
-#         if old_full_path and os.path.isfile(old_full_path):
-#             orig_filename = os.path.basename(old_full_path)
-#             # Compose new filename, ensure unique in target folder
-#             base_file_name = base_name + suffix_map[field] + ext
-#             unique_filename = get_unique_filename(target_folder, base_file_name)
-
-#             # Move file
-#             new_full_path = os.path.join(target_folder, unique_filename)
-#             shutil.move(old_full_path, new_full_path)
-
-#             # Save relative path in DB (relative to IMAGE_ROOT)
-#             relative_path = os.path.relpath(new_full_path, IMAGE_ROOT)
-#             new_filenames[field] = relative_path.replace("\\", "/")  # for Windows compatibility
-
-#         else:
-#             new_filenames[field] = getattr(db_record, field)  # no change if file missing
-
-#     # Update DB paths with new relative paths
-#     for key, val in new_filenames.items():
-#         setattr(db_record, key, val)
-
-#     db.commit()
-#     db.refresh(db_record)
-
-#     return db_record
 
 import os
 import shutil
@@ -1281,7 +1133,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models import DoctorImageValidation
 from app.schemas import DoctorImageValidationRequest, DoctorImageValidationResponse, CropImageValidationResponse, CropImageValidationRequest
-#from database import get_db
+
 
 router = APIRouter()
 
@@ -1313,99 +1165,9 @@ def move_and_rename_file(src_path: str, dest_dir: str) -> str:
     return os.path.basename(dest_path)  # Return new filename only
 
 
-import os
-import shutil
-
-def move_with_unique_name(src_path: str, target_dir: str):
-    src_path = os.path.abspath(src_path)  # Ensure it's absolute
-
-    if not os.path.exists(src_path):
-        print(f"DEBUG: Source file not found for moving: {src_path}") # Added debug print
-        return None, None # Return None if source file doesn't exist
-    
-    os.makedirs(target_dir, exist_ok=True)
-
-    base_name = os.path.basename(src_path)
-    name, ext = os.path.splitext(base_name)
-    dest_path = os.path.join(target_dir, base_name)
-    counter = 1
-
-    # Loop to find a unique name
-    while os.path.exists(dest_path):
-        new_name = f"{name}_{counter}{ext}"
-        dest_path = os.path.join(target_dir, new_name)
-        counter += 1
-
-    shutil.move(src_path, dest_path)
-    
-    # Return the new filename (basename) and the absolute path
-    return os.path.basename(dest_path), dest_path
 
 
-@app.post("/skin_disease_image/update/{base_name}", response_model=DoctorImageValidationResponse)
-def submit_validation(
-    base_name: str, # This is the original base name from the frontend (e.g., "image1")
-    payload: DoctorImageValidationRequest,
-    db: Session = Depends(get_db)
-):
-    print(payload)
-    # Define the single target directory for all categorized images
-    CATEGORIZED_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
 
-    # Define the source paths for the images based on BASE_IMAGE_DIR and the original base_name
-    # Assuming original images are directly in BASE_IMAGE_DIR
-    #orig_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}.jpg")
-    #orig_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_mask.jpg")
-    crop_image_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop.jpg")
-    crop_mask_src = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop_mask.jpg")
-
-    # Move images and get their new unique filenames and absolute paths
-    #image_new_filename, image_abs_path = move_with_unique_name(orig_image_src, CATEGORIZED_IMAGES_DIR)
-    #mask_new_filename, mask_abs_path = move_with_unique_name(orig_mask_src, CATEGORIZED_IMAGES_DIR)
-    crop_new_filename, crop_abs_path = move_with_unique_name(crop_image_src, CATEGORIZED_IMAGES_DIR)
-    crop_mask_new_filename, crop_mask_abs_path = move_with_unique_name(crop_mask_src, CATEGORIZED_IMAGES_DIR)
-
-    # Check if any required image failed to move
-    # If a source file was not found, move_with_unique_name returns (None, None)
-    #if not image_new_filename: # Original image is mandatory
-    #    raise HTTPException(status_code=400, detail=f"Original image file not found or could not be moved: {orig_image_src}")
-
-    # Construct the URL paths to be stored in the database
-    # These paths are relative to the `/images/` FastAPI mount point
-    #image_db_path = f"/images/categorized_images_crops_categorized/{image_new_filename}"
-    #mask_db_path = f"/images/categorized_images_crops_categorized/{mask_new_filename}" if mask_new_filename else None
-    crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
-    crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
-
-    # Save to DB
-    db_record = DoctorImageValidation(
-        image_path=None,#image_db_path,
-        mask_path=None,#mask_db_path,
-        crop_path=crop_db_path,
-        crop_mask_path=crop_mask_db_path,
-        doctor_name=payload.doctor_name, #--------------DONE
-        mask_rating=payload.mask_rating,   #--------------DONE
-        comments=payload.comments,   #--------------DONE
-        mask_comments=payload.mask_comments,   #--------------DONE
-        disease_name=None,#payload.disease_name,
-        category=None,#payload.category,
-        real_generated=payload.real_generated,   #--------------DONE
-        realism_rating=payload.realism_rating,   #--------------DONE
-        image_precision=payload.image_precision,   #--------------DONE
-        skin_color_precision=None,#payload.skin_color_precision,
-        confidence_level=payload.confidence_level,   #--------------DONE
-        crop_quality_rating=None,#payload.crop_quality_rating,
-        crop_diagnosis=None,#payload.crop_diagnosis,
-        fitzpatrick_scale=None,#payload.fitzpatrick_scale,
-        created_at=datetime.utcnow()
-    )
-
-    print(payload)
-    db.add(db_record)
-    db.commit()
-    db.refresh(db_record)
-
-    return db_record
 
 # const payload = {
 #                 doctor_name: doctorNameInput.value,
@@ -1440,15 +1202,46 @@ from fastapi.responses import StreamingResponse
 
 
 ################ -------------------------------------   CATEGRIZE IMAGES MODULE --------------------------------########################
-STATIC_DIR = "images"
-SKIN_DISEASE_CROPS_IMAGES_DIRECTORY_PATH = os.path.join(STATIC_DIR, "categorized_images")
-os.makedirs(SKIN_DISEASE_CROPS_IMAGES_DIRECTORY_PATH, exist_ok=True)
+BASE_IMAGE_DIR = "images"
+# Source Directory for Images for Categorize_images Module
+CATEGORIZE_IMAGES_DIRECTORY = os.path.join(BASE_IMAGE_DIR, "categorized_images")
+os.makedirs(CATEGORIZE_IMAGES_DIRECTORY, exist_ok=True)
+# Target Directory for Images for Categorize_images Module
+CATEGORIZE_IMAGES_DIRECTORY_TARGET = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
+os.makedirs(CATEGORIZE_IMAGES_DIRECTORY_TARGET, exist_ok=True)
+
+
+def move_with_unique_name(src_path: str, target_dir: str):
+    
+    # Checking if it is absolute path
+    #os.path.join(os.getcwd(), path)
+    src_path = os.path.abspath(src_path)
+    if not os.path.exists(src_path):
+        print(f"Source file not found for moving: {src_path}")
+        return None, None
+    
+    os.makedirs(target_dir, exist_ok=True)
+
+    base_name = os.path.basename(src_path)
+    name, ext = os.path.splitext(base_name)
+    dest_path = os.path.join(target_dir, base_name)
+    counter = 1
+
+    while os.path.exists(dest_path):
+        new_name = f"{name}_{counter}{ext}"
+        dest_path = os.path.join(target_dir, new_name)
+        counter += 1
+
+    shutil.move(src_path, dest_path)
+    
+    # Returns the base file name and the absolute path
+    return os.path.basename(dest_path), dest_path
 
 # CATEGORIZE IMAGES (CATEGORIZE_IMAGES.HTML)
 @app.get("/get_all_base_names")
 async def get_all_base_names():
     try:
-        files_list = os.listdir(SKIN_DISEASE_CROPS_IMAGES_DIRECTORY_PATH)
+        files_list = os.listdir(CATEGORIZE_IMAGES_DIRECTORY)
         files_set = set(files_list)
 
         base_names_set = set()
@@ -1464,6 +1257,57 @@ async def get_all_base_names():
 
     except Exception as error_:
         return JSONResponse(content={"error": str(error_)}, status_code=500)
+
+
+@app.post("/skin_disease_image/update/{base_name}", response_model=DoctorImageValidationResponse)
+def submit_validation(
+    base_name: str, 
+    payload: DoctorImageValidationRequest,
+    db: Session = Depends(get_db)
+):
+    print(payload)
+
+    
+    crop_image_src_file = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop.jpg")
+    crop_mask_src_file = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop_mask.jpg")
+
+    # Moving the crop and crop mask files to the target directory after the update button is pressed
+    # New files' names will be created if there already exists a file with the same name
+    crop_new_filename, crop_abs_path = move_with_unique_name(crop_image_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
+    crop_mask_new_filename, crop_mask_abs_path = move_with_unique_name(crop_mask_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
+
+    crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
+    crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
+
+    # Creating an Object for adding the row to the db
+    db_row = DoctorImageValidation(
+        image_path=None,
+        mask_path=None,
+        crop_path=crop_db_path,
+        crop_mask_path=crop_mask_db_path,
+        doctor_name=payload.doctor_name, #--------------DONE
+        mask_rating=payload.mask_rating,   #--------------DONE
+        comments=payload.comments,   #--------------DONE
+        mask_comments=payload.mask_comments,   #--------------DONE
+        disease_name=None,
+        category=None,
+        real_generated=payload.real_generated,   #--------------DONE
+        realism_rating=payload.realism_rating,   #--------------DONE
+        image_precision=payload.image_precision,   #--------------DONE
+        skin_color_precision=None,
+        confidence_level=payload.confidence_level,   #--------------DONE
+        crop_quality_rating=None,
+        crop_diagnosis=None,
+        fitzpatrick_scale=None,
+        created_at=datetime.now(ZoneInfo("Europe/Rome"))
+    )
+
+    print(payload)
+    db.add(db_row)
+    db.commit()
+    db.refresh(db_row)
+
+    return db_row
 
 #################--------------------------------------------------------------------------------------------------##########################
 

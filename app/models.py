@@ -1,5 +1,5 @@
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
 
 # sqlalchemy to connect with the Postgresql
 # it is essential to create an engine object, that serves as a central source of connection by providing a connection pool 

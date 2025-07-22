@@ -1,33 +1,42 @@
-from fastapi import FastAPI, HTTPException, Depends, Form, Query
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor
-from app.schemas import DoctorImageValidationResponse, DoctorSchema, CropImageValidationResponse, CropImageValidationRequest  # Import DoctorSchema
 import os
+import re
 import shutil
 import pandas as pd
 import logging
-from sqlalchemy import inspect, text
-from sqlalchemy.exc import OperationalError
-from typing import List, Tuple  # Import Tuple
-from fastapi import FastAPI, HTTPException, Depends, Form, Query
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from app.models import SkinDiseaseImage, SessionLocal, engine, Base, CropImageValidation
-from app.schemas import SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse, PatientImageMetadata, \
-    SkinToneClassificationResponse, SkinToneClassificationRequest # Create a new schema
-from typing import Optional, List
-import re
-from app.schemas import DoctorImageValidationUpdateRequest
-from fastapi.responses import FileResponse
-from datetime import datetime
-# No need to recreate tables here, model.py does it
-# Base.metadata.create_all(bind=engine)
 import random
 from datetime import datetime, timezone # <--- Change UTC to timezone
-from fastapi import status # <--- Add this line
+
+
+from fastapi import FastAPI, HTTPException, Depends, Form, Query
+from fastapi import status
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Depends, Form, Query
+
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import OperationalError
+
+from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor
+from app.models import SkinDiseaseImage, SessionLocal, engine, Base, CropImageValidation
+
+from app.schemas import DoctorImageValidationResponse, DoctorSchema, CropImageValidationResponse, CropImageValidationRequest, \
+    DoctorImageValidationUpdateRequest, SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse, PatientImageMetadata, \
+    SkinToneClassificationResponse, SkinToneClassificationRequest
+from typing import List, Tuple, Optional, List
+
+
+
+
+
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -506,66 +515,17 @@ async def register_doctor(
     return {"message": "Doctor registered successfully", "doctor_id": db_doctor.id}
 
 
+
+
+###----------------------------------------Get Doctors from the DB--------------------------------------------------------###
 @app.get("/doctors/", response_model=List[DoctorSchema])
 async def get_doctors(db: Session = Depends(get_db)):
-    """
-    Retrieves all doctors from the database.
-    """
     doctors = db.query(Doctor).all()
     return doctors
-
-@app.delete("/doctors/")
-async def delete_doctors_table(db: Session = Depends(get_db)):
-    """
-    Deletes the doctors table from the database.
-    """
-    inspector = inspect(db.bind)
-    if not inspector.has_table("doctors"):
-        raise HTTPException(status_code=404, detail="Doctors table not found")
-
-    # Use a raw SQL query to delete the table
-    try:
-        db.execute(text("DROP TABLE doctors"))
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to delete table: {e}")
-
-    return {"message": "Doctors table deleted successfully"}
+###-----------------------------------------------------------------------------------------------------------------------###
 
 
-def drop_table(db: Session, table_name: str):
-    """
-    Drops the specified table from the database.
 
-    Args:
-        db: The database session.
-        table_name: The name of the table to drop.
-    """
-    try:
-        if table_name == 'doctor_image_validation':
-            DoctorImageValidation.__table__.drop(bind=engine)
-        elif table_name == 'doctors':
-            Doctor.__table__.drop(bind=engine)
-        else:
-            raise HTTPException(status_code=400, detail=f"Table '{table_name}' not found.")
-        db.commit()  # Commit the changes after dropping the table
-        logging.info(f"Table '{table_name}' dropped successfully.")
-    except OperationalError as e:
-        logging.error(f"Error dropping table '{table_name}': {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to drop table '{table_name}': {e}"
-        )
-    except Exception as e:
-        logging.error(f"Unexpected error dropping table '{table_name}': {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
-
-from sqlalchemy import text
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-# ... other imports from your code
 
 @app.delete("/delete_table/{table_name}")
 def delete_table_route(table_name: str, db: Session = Depends(get_db)):

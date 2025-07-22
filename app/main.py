@@ -6,35 +6,45 @@ import logging
 import random
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from starlette.responses import RedirectResponse
+
+
+from fastapi import UploadFile, File, Form, HTTPException, status
+from fastapi.responses import HTMLResponse # Ensure HTMLResponse is imported for the root route
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path # For robust path handling
 
 from fastapi import FastAPI, HTTPException, Depends, Form, Query
 from fastapi import status
 from fastapi import FastAPI, Depends, HTTPException
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from fastapi import FastAPI, HTTPException, Depends, Form, Query
 
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from sqlalchemy import inspect, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import text, text
+from sqlalchemy.exc import OperationalError, IntegrityError
+from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor, SkinDiseaseImage, SessionLocal, CropImageValidation ,CropImageRating
+from app.models import CropImageQualityRating
 
-from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor
-from app.models import SkinDiseaseImage, SessionLocal, engine, Base, CropImageValidation
 
 from app.schemas import DoctorImageValidationResponse, DoctorSchema, CropImageValidationResponse, CropImageValidationRequest, \
     DoctorImageValidationUpdateRequest, SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse, PatientImageMetadata, \
-    SkinToneClassificationResponse, SkinToneClassificationRequest
+    SkinToneClassificationResponse, SkinToneClassificationRequest, BatchCropImageRatingRequest, CropImageMetadata, SkinToneClassificationRequest, \
+        SkinToneClassificationResponse
+
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from app.models import DoctorImageValidation
+from app.schemas import DoctorImageValidationRequest, DoctorImageValidationResponse, CropImageValidationResponse, CropImageValidationRequest
+
+
 from typing import List, Tuple, Optional, List
 
 
-
-
-
+from http import HTTPStatus
 
 
 def get_db():
@@ -69,20 +79,16 @@ app.add_middleware(
 )
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
-# Mount your static files at a path, e.g., /static-frontend
+# Mount static files at a path, e.g., /static-frontend
 # Make sure the directory path is correct on your VM
-# IMPORTANT: Ensure your 'main.html' and other frontend files are actually
+# ensure 'main.html' and other frontend files are actually
 # inside a 'frontend' sub-directory within this specified path.
 app.mount("/frontend", StaticFiles(directory="/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/frontend"), name="static_frontend")
 
-# Optional: Redirect root to your main HTML file
+# Redirect root to the main HTML file
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/static-frontend/main.html")
-
-# (Your /get_skin_disease_data/ endpoint would remain as is)
-
-
+    return RedirectResponse(url="/frontend/main.html")
 
 
 # --- Serve skin disease images from the external hard drive at a NEW prefix ---
@@ -559,10 +565,10 @@ def delete_table_route(table_name: str, db: Session = Depends(get_db)):
 
 
 def populate_database_from_filesystem(db: Session, image_root: str):
-    """
-    Populates the database with image paths relative to image_root, and links masks, in a single pass.
-    Skips files with '_crop' in the filename.
-    """
+
+    # Populates the database with image paths relative to image_root, and links masks
+    # Skips files with '_crop' in the filename.
+    
     for amended_dir in os.listdir(image_root):
         amended_path = os.path.join(image_root, amended_dir)
         if not os.path.isdir(amended_path):
@@ -668,7 +674,7 @@ async def get_skin_disease_image(image_id: int, db: Session = Depends(get_db)):
 
 
 
-# --- UPDATED ROUTE: Get Unique Patient IDs for Skin Tone Classification (with validation filter) ---
+# Get Unique Patient IDs for Skin Tone Classification (with validation filter) ---
 @app.get("/unique_patients/", response_model=List[str])
 async def get_unique_patients(
     validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
@@ -693,7 +699,7 @@ async def get_unique_patients(
     return sorted([persona[0] for persona in unique_personas if persona[0] is not None])
 from sqlalchemy.sql import or_
 
-# --- UPDATED ROUTE: Get Images for a Specific Patient ID (with validation filter) ---
+# Get Images for a Specific Patient ID (with validation filter) ---
 @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
 async def get_patient_images(
     persona_digits: str,
@@ -733,137 +739,8 @@ async def get_patient_images(
 
 
 
-from app.schemas import SkinToneClassificationRequest, SkinToneClassificationResponse
-from http import HTTPStatus
-
-# --- UPDATED ROUTE: Classify Skin Tone (Implements Conditional SkinDiseaseImage Update/Create) ---
-# @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
-# async def classify_skin_tone(
-#     persona_digits: str,
-#     classification_data: SkinToneClassificationRequest, # Expecting JSON body from frontend
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Classifies the skin tone for a given patient (persona_digits) by a specific doctor.
-#     - Always creates a new entry in SkinToneClassification (logging each classification event).
-#     - Conditionally updates or creates entries in SkinDiseaseImage based on existing doctor_name.
-#     - No image directory is moved.
-#     """
-#     try:
-#         # Fetch the first SkinDiseaseImage entry for this persona_digits to get image/mask/crop paths
-#         # This assumes that if a patient has multiple images, picking the first one is acceptable
-#         # for logging in SkinToneClassification.
-#         # first_image_entry = db.query(models.SkinDiseaseImage).filter(
-#         #     models.SkinDiseaseImage.persona_digits == persona_digits
-#         # ).first()
-
-#         # image_name_log = None
-#         # image_path_log = None
-#         # mask_name_log = None
-#         # mask_path_log = None
-#         # crop_image_name_log = None
-#         # crop_image_path_log = None
-#         # crop_mask_name_log = None
-#         # crop_mask_path_log = None
-
-#         # if first_image_entry:
-#         #     image_name_log = first_image_entry.image_name
-#         #     image_path_log = first_image_entry.image_path
-#         #     mask_name_log = first_image_entry.mask_name
-#         #     mask_path_log = first_image_entry.mask_path
-#         #     crop_image_name_log = first_image_entry.crop_image_name
-#         #     crop_image_path_log = first_image_entry.crop_image_path
-#         #     crop_mask_name_log = first_image_entry.crop_mask_name
-#         #     crop_mask_path_log = first_image_entry.crop_mask_path
-#         # else:
-#         #     print(f"Warning: No SkinDiseaseImage entry found for persona_digits {persona_digits}. "
-#         #           "Image/mask/crop paths in SkinToneClassification will be null.")
 
 
-#         # # 1. Always create a new entry in SkinToneClassification
-#         # new_classification = models.SkinToneClassification(
-#         #     persona_digits=persona_digits,
-#         #     doctor_name=classification_data.doctor_name,
-#         #     fitzpatrick_scale=classification_data.fitzpatrick_scale,
-#         #     image_name=image_name_log, # Populating new fields
-#         #     image_path=image_path_log,
-#         #     mask_name=mask_name_log,
-#         #     mask_path=mask_path_log,
-#         #     crop_image_name=crop_image_name_log,
-#         #     crop_image_path=crop_image_path_log,
-#         #     crop_mask_name=crop_mask_name_log,
-#         #     crop_mask_path=crop_mask_path_log
-#         # )
-#         # db.add(new_classification)
-#         message_part_1 = f"New classification recorded for patient {persona_digits} by doctor {classification_data.doctor_name}."
-
-#         # 2. Conditionally update or create entries in SkinDiseaseImage
-#         skin_disease_images = db.query(SkinDiseaseImage).filter(
-#             SkinDiseaseImage.persona_digits == persona_digits
-#         ).all()
-
-#         # if not skin_disease_images:
-#         #     print(f"Warning: No SkinDiseaseImage entries found for persona_digits {persona_digits}. "
-#         #           "No SkinDiseaseImage records to update/create.")
-#         #     db.commit() # Commit the SkinToneClassification log entry
-#         #     return {"message": f"{message_part_1} No associated image records found to update/create."}
-
-#         for image_entry in skin_disease_images:
-#             # Check if doctor_name field is NULL or empty
-#             if image_entry.doctor_name is None or image_entry.doctor_name == "":
-#                 # Condition 1: Doctor name is not set, so UPDATE the existing entry
-#                 image_entry.doctor_name = classification_data.doctor_name
-#                 image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
-#                 # SQLAlchemy automatically tracks changes to managed objects for updates
-#                 print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
-#             else:
-#                 # Condition 2: Doctor name is already set, so CREATE a new entry
-#                 new_skin_disease_image_entry = SkinDiseaseImage(
-#                     disease_name_amended=image_entry.disease_name_amended,
-#                     disease_name=image_entry.disease_name,
-#                     persona_digits=image_entry.persona_digits,
-#                     example_digit=image_entry.example_digit,
-#                     image_name=image_entry.image_name, # Same image name
-#                     mask_name=image_entry.mask_name,
-#                     image_path=image_entry.image_path, # Same image path
-#                     mask_path=image_entry.mask_path,
-#                     crop_image_name=image_entry.crop_image_name,
-#                     crop_image_path=image_entry.crop_image_path,
-#                     crop_mask_name=image_entry.crop_mask_name,
-#                     crop_mask_path=image_entry.crop_mask_path,
-                    
-#                     doctor_name=classification_data.doctor_name, # New doctor name
-#                     fitzpatrick_scale=classification_data.fitzpatrick_scale, # New fitzpatrick scale
-#                     # Other fields can be copied or left as default/null if not relevant to classification
-#                     rating=image_entry.rating,
-#                     comments=image_entry.comments,
-#                     category=image_entry.category,
-#                     years_of_experience=image_entry.years_of_experience,
-#                     real_generated=image_entry.real_generated,
-#                     realism_rating=image_entry.realism_rating,
-#                     image_precision=image_entry.image_precision,
-#                     skin_color_precision=image_entry.skin_color_precision,
-#                     confidence_level=image_entry.confidence_level,
-#                     crop_quality_rating=image_entry.crop_quality_rating,
-#                     crop_diagnosis=image_entry.crop_diagnosis,
-#                     created_at=datetime.now() # Set new creation timestamp
-#                 )
-#                 db.add(new_skin_disease_image_entry)
-#                 print(f"Created new SkinDiseaseImage entry for {image_entry.image_name} with ID {new_skin_disease_image_entry.id}")
-
-#         db.commit() # Commit all changes (SkinToneClassification log and SkinDiseaseImage updates/creations)
-
-#         return {"message": f"{message_part_1} Associated image records conditionally updated/created."}
-
-#     except Exception as e:
-#         db.rollback()
-#         print(f"Error classifying skin tone for {persona_digits}: {e}")
-#         raise HTTPException(
-#             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-#             detail=f"An unexpected error occurred during classification: {e}"
-#         )
-    
-# --- UPDATED ROUTE: Classify Skin Tone (Implements Conditional SkinDiseaseImage Update/Create) ---
 @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
 async def classify_skin_tone(
     persona_digits: str,
@@ -960,7 +837,7 @@ async def classify_skin_tone(
                     confidence_level=image_entry.confidence_level,
                     crop_quality_rating=image_entry.crop_quality_rating,
                     crop_diagnosis=image_entry.crop_diagnosis,
-                    created_at=datetime.now()
+                    created_at=datetime.now(ZoneInfo("Europe/Rome"))
                 )
                 db.add(new_skin_disease_image_entry)
                 created_count += 1
@@ -1127,12 +1004,7 @@ async def update_image_fields(image_id: int, update_data: UpdateImageFields, db:
     return {"message": "Image updated successfully"}
 
 
-import os
-import shutil
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
-from app.models import DoctorImageValidation
-from app.schemas import DoctorImageValidationRequest, DoctorImageValidationResponse, CropImageValidationResponse, CropImageValidationRequest
+
 
 
 router = APIRouter()
@@ -1211,7 +1083,7 @@ CATEGORIZE_IMAGES_DIRECTORY_TARGET = os.path.join(BASE_IMAGE_DIR, "categorized_i
 os.makedirs(CATEGORIZE_IMAGES_DIRECTORY_TARGET, exist_ok=True)
 
 
-def move_with_unique_name(src_path: str, target_dir: str):
+def move_to_target_directory_with_unique_name(src_path: str, target_dir: str):
     
     # Checking if it is absolute path
     #os.path.join(os.getcwd(), path)
@@ -1273,8 +1145,8 @@ def submit_validation(
 
     # Moving the crop and crop mask files to the target directory after the update button is pressed
     # New files' names will be created if there already exists a file with the same name
-    crop_new_filename, crop_abs_path = move_with_unique_name(crop_image_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
-    crop_mask_new_filename, crop_mask_abs_path = move_with_unique_name(crop_mask_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
+    crop_new_filename, crop_abs_path = move_to_target_directory_with_unique_name(crop_image_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
+    crop_mask_new_filename, crop_mask_abs_path = move_to_target_directory_with_unique_name(crop_mask_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
 
     crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
     crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
@@ -1301,6 +1173,19 @@ def submit_validation(
         fitzpatrick_scale=None,
         created_at=datetime.now(ZoneInfo("Europe/Rome"))
     )
+
+    # from datetime import datetime
+    # from zoneinfo import ZoneInfo
+    # server_timezone = "America/New_York"
+    # new_timezone = "Europe/Rome"
+    # current_time = datetime.now(ZoneInfo(server_timezone)) 
+    # current_time_in_new_timezone = current_time.astimezone(ZoneInfo(new_timezone))
+    # print(current_time.isoformat(timespec='seconds'))
+    # # 2024-04-18T02:37:10-04:00
+    # print(repr(current_time))
+    # # datetime.datetime(2024, 4, 18, 2, 37, 10, 30703, tzinfo=zoneinfo.ZoneInfo(key='America/New_York'))
+    # print(current_time_in_new_timezone.isoformat(timespec='seconds'))
+    # # 2024-04-17T23:37:10-07:00
 
     print(payload)
     db.add(db_row)
@@ -1374,7 +1259,7 @@ async def get_skin_disease_data(db: Session = Depends(get_db)):
             "crop_quality_rating": image.crop_quality_rating,
             "crop_diagnosis": image.crop_diagnosis,
             "fitzpatrick_scale": image.fitzpatrick_scale,
-            "created_at": image.created_at.isoformat() if image.created_at else None # Handle datetime serialization
+            "created_at": image.created_at.isoformat() if image.created_at else None
         })
 
     return JSONResponse(content=data)
@@ -1500,7 +1385,7 @@ def submit_batch_categorization(
             print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
             continue # Skip this image
 
-        new_filename, new_abs_path = move_with_unique_name(src_path, CATEGORIZED_CROP_IMAGES_DIR)
+        new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZED_CROP_IMAGES_DIR)
 
         if not new_filename:
             print(f"Warning: Could not move image {original_filename}. Skipping.")
@@ -1515,7 +1400,7 @@ def submit_batch_categorization(
             comments=payload.comments,
             crop_diagnosis=payload.crop_diagnosis,
             fitzpatrick_scale=None, #payload.fitzpatrick_scale,
-            created_at=datetime.now(timezone.utc) # <--- Use timezone.utc here
+            created_at=datetime.now(ZoneInfo("Europe/Rome"))
         )
         records_to_add.append(db_record)
 
@@ -1603,7 +1488,7 @@ async def create_new_categorization(
         crop_quality_rating=None,#data.crop_quality_rating,
         crop_diagnosis=None,#data.crop_diagnosis,
         fitzpatrick_scale=None,#data.fitzpatrick_scale,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(ZoneInfo("Europe/Rome"))
     )
 
     db.add(new_db_entry)
@@ -1619,84 +1504,8 @@ async def create_new_categorization(
     return new_db_entry
 
 
-from app.schemas import BatchCropImageRatingRequest, CropImageMetadata
-from app.models import CropImageRating
-from sqlalchemy.exc import IntegrityError
-
-# @app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
-# async def get_crop_images_for_validation(
-#     offset: int = 0,
-#     limit: int = 15,
-#     db: Session = Depends(get_db)
-# ):
-#     all_image_filenames = [f for f in os.listdir(CROP_IMAGES_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
-#     all_image_filenames.sort()
-
-#     # Get paths of images already rated from the NEW table name
-#     validated_image_paths = db.query(CropImageRating.image_path).all() # <--- CHANGED MODEL HERE
-#     validated_image_paths_set = {path[0] for path in validated_image_paths}
-
-#     unvalidated_image_filenames = [
-#         f for f in all_image_filenames
-#         if f"/image/classify_skin_disease_crops_images/{f}" not in validated_image_paths_set
-#     ]
-
-#     batch_filenames = unvalidated_image_filenames[offset : offset + limit]
-
-#     image_metadata_list = [
-#         CropImageMetadata(image_path=f"/image/classify_skin_disease_crops_images/{filename}")
-#         for filename in batch_filenames
-#     ]
-
-#     return image_metadata_list
 
 
-
-# @app.post("/submit_crop_validations/", status_code=status.HTTP_201_CREATED)
-# async def submit_crop_validations(
-#     batch_data: BatchCropImageRatingRequest, # <--- CHANGED SCHEMA HERE
-#     db: Session = Depends(get_db)
-# ):
-#     new_entries = []
-#     for rating_data in batch_data.validations: # Renamed loop variable for clarity
-#         try:
-#             # Check if an entry for this image_path already exists in the NEW table name
-#             existing_entry = db.query(CropImageRating).filter( # <--- CHANGED MODEL HERE
-#                 CropImageRating.image_path == rating_data.image_path
-#             ).first()
-
-#             if existing_entry:
-#                 print(f"Warning: Rating for {rating_data.image_path} already exists. Skipping or updating.")
-#                 continue
-
-#             new_entry = CropImageRating( # <--- CHANGED MODEL HERE
-#                 image_path=rating_data.image_path,
-#                 doctor_name=rating_data.doctor_name,
-#                 comments=rating_data.comments,
-#                 crop_quality_rating=rating_data.crop_quality_rating,
-#                 crop_diagnosis=rating_data.crop_diagnosis,
-#             )
-#             db.add(new_entry)
-#             new_entries.append(new_entry)
-
-#         except IntegrityError:
-#             db.rollback()
-#             raise HTTPException(
-#                 status_code=status.HTTP_409_CONFLICT,
-#                 detail=f"Rating for image {rating_data.image_path} already exists."
-#             )
-#         except Exception as e:
-#             db.rollback()
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail=f"Error processing rating for {rating_data.image_path}: {str(e)}"
-#             )
-
-#     db.commit()
-#     for entry in new_entries:
-#         db.refresh(entry)
-
-#     return {"message": f"Successfully processed {len(new_entries)} ratings."}
 
 # Directory containing the original unvalidated crop images
 CROP_IMAGES_SOURCE_DIR = os.path.join("images", "classify_skin_disease_crops_images")
@@ -1997,7 +1806,6 @@ async def submit_crop_quality_rating(
             detail=f"Unexpected error processing rating for {rating_data.image_path}: {str(e)}"
         )
 
-from app.models import CropImageQualityRating
 
 
 @app.get("/get_excel_data_categorized_doctor_skin_disease_crops_rating_single_image/")
@@ -2043,15 +1851,8 @@ async def get_image_subdirectories():
     return subdirectories
 
 
-import os
-import shutil
-from typing import List, Optional
-from fastapi import UploadFile, File, Form, HTTPException, status
-from fastapi.responses import HTMLResponse # Ensure HTMLResponse is imported for the root route
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path # For robust path handling
 
-# --- EXISTING ROUTE: Handle Image Uploads ---
+
 @app.post("/upload_images/")
 async def upload_images(
     files: List[UploadFile] = File(...), # List of uploaded files

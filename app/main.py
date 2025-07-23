@@ -47,7 +47,7 @@ async def root():
     return RedirectResponse(url="/frontend/main.html")
 
 
-######### ----------------------- Serve skin disease images from the external hard drive at a NEW prefix ---------------------------#################
+######### ----------------------- Serve skin disease images from the external hard drive ---------------------------#################
 skin_disease_data_path = "/root/test_data" #"/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
 app.mount("/skin_disease_data", StaticFiles(directory=skin_disease_data_path), name="skin_disease_data")
 
@@ -505,7 +505,7 @@ def populate_database_from_filesystem(db: Session, image_root: str):
                         full_path = os.path.join(image_root, relative_path)
 
                         if "_mask" in filename:
-                            # Handle mask
+                            
                             match = re.match(r"(.+)_mask\.png$", filename)
                             if not match:
                                 print(f"Invalid mask filename: {filename}")
@@ -514,7 +514,7 @@ def populate_database_from_filesystem(db: Session, image_root: str):
                             base_image_name = match.group(1) + ".png"
                             print(f"Processing mask: {filename}, base_image_name: {base_image_name}")
 
-                            # Query for matching image
+                            
                             original_image = db.query(SkinDiseaseImage).filter_by(
                                 disease_name_amended=amended_dir,
                                 disease_name=disease_dir,
@@ -530,7 +530,7 @@ def populate_database_from_filesystem(db: Session, image_root: str):
                             else:
                                 print(f"No image found for mask: {filename} (expected image: {base_image_name})")
                         else:
-                            # Handle base image
+                            
                             new_image = SkinDiseaseImage(
                                 disease_name_amended=amended_dir,
                                 disease_name=disease_dir,
@@ -539,7 +539,7 @@ def populate_database_from_filesystem(db: Session, image_root: str):
                                 image_name=filename,
                                 image_path=os.path.join("/skin_disease_data", relative_path)
                             )
-                            # Check for corresponding mask file
+                            
                             mask_filename = filename.replace(".png", "_mask.png")
                             mask_path = os.path.join(example_path, mask_filename)
                             if os.path.exists(mask_path):
@@ -632,7 +632,7 @@ async def get_patient_images(
 @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
 async def classify_skin_tone(
     persona_digits: str,
-    classification_data: SkinToneClassificationRequest, # Expecting JSON body from frontend
+    classification_data: SkinToneClassificationRequest, 
     db: Session = Depends(get_db)
 ):
     

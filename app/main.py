@@ -60,7 +60,7 @@ def find_image_pair(directory="images") -> List[Tuple[str, str]]:
     image_pairs = []
     try:
         for filename in os.listdir(directory):
-            if "_mask" not in filename:  # Process only original images
+            if "_mask" not in filename:  
                 name, ext = os.path.splitext(filename)
                 mask_filename = f"{name}_mask{ext}"
                 mask_path = os.path.join(directory, mask_filename)
@@ -88,7 +88,7 @@ async def get_first_uncategorized_image():
             rating=None,
             comments=None,
             mask_comments=None,
-            disease_name="Unknown",  # Changed from None to "Unknown"
+            disease_name="Unknown",  
             category=None
         )
     raise HTTPException(status_code=404, detail="No image pairs to categorize found.")
@@ -207,9 +207,6 @@ async def submit_categorization(
 
         db_image.image_path = os.path.join("images", category, new_original_filename)
         db_image.mask_path = os.path.join("images", category, new_mask_filename)
-
-        
-        #db_image.years_of_experience = years_of_experience
         db_image.real_generated = real_generated
         db_image.realism_rating = realism_rating
         db_image.image_precision = image_precision
@@ -283,13 +280,13 @@ async def update_image_details(
     db_image.fitzpatrick_scale = fitzpatrick_scale 
     db.commit()  
 
-    # Move files if the category has changed
+    
     if old_category != category:
         try:
-            # Define source and destination directories
+            
             source_original_path = os.path.join(old_image_path)
             source_mask_path = os.path.join(old_mask_path)
-            destination_dir = os.path.join("images", category)  # Correct destination
+            destination_dir = os.path.join("images", category)  
             os.makedirs(destination_dir, exist_ok=True)
             destination_original_path = os.path.join(destination_dir, os.path.basename(old_image_path))
             destination_mask_path = os.path.join(destination_dir, os.path.basename(old_mask_path))
@@ -317,7 +314,7 @@ async def update_image_details(
             os.rename(source_original_path, new_original_path)
             os.rename(source_mask_path, new_mask_path)
 
-            # Update the database with the new paths
+            
             db_image.image_path = os.path.join("images", category, new_original_filename)
             db_image.mask_path = os.path.join("images", category, new_mask_filename)
             db.commit()
@@ -343,9 +340,9 @@ async def download_categorizations_excel(db: Session = Depends(get_db)):
             status_code=404, detail="No categorizations found in the database."
         )
 
-    # Convert the database entries to a list of dictionaries
+    
     data = [entry.__dict__ for entry in categorizations]
-    # Remove the SQLAlchemy internal attributes
+    
     for row in data:
         row.pop('_sa_instance_state', None)
 
@@ -437,15 +434,12 @@ async def register_doctor(
 
 
 
-
 ###----------------------------------------Get Doctors from the DB--------------------------------------------------------###
 @app.get("/doctors/", response_model=List[DoctorSchema])
 async def get_doctors(db: Session = Depends(get_db)):
     doctors = db.query(Doctor).all()
     return doctors
 ###-----------------------------------------------------------------------------------------------------------------------###
-
-
 
 
 @app.delete("/delete_table/{table_name}")
@@ -472,8 +466,7 @@ def delete_table_route(table_name: str, db: Session = Depends(get_db)):
 
 def populate_database_from_filesystem(db: Session, image_root: str):
 
-    # Populates the database with image paths relative to image_root, and links masks
-    # Skips files with '_crop' in the filename.
+    
     
     for amended_dir in os.listdir(image_root):
         amended_path = os.path.join(image_root, amended_dir)
@@ -564,7 +557,7 @@ async def populate_db(db: Session = Depends(get_db), image_path: str = Query(...
     return {"message": f"Database populated from filesystem at {image_path}."}
 
 
-# --- Routes for viewing and editing image details ---
+
 @app.get("/skin_disease_images/", response_model=List[SkinDiseaseImageResponse])
 async def get_skin_disease_images(db: Session = Depends(get_db), page: int = 1, per_page: int = 1):
     skip = (page - 1) * per_page
@@ -579,8 +572,6 @@ async def get_skin_disease_image(image_id: int, db: Session = Depends(get_db)):
     return image
 
 
-
-# Get Unique Patient IDs for Skin Tone Classification (with validation filter) ---
 @app.get("/unique_patients/", response_model=List[str])
 async def get_unique_patients(
     validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
@@ -590,19 +581,19 @@ async def get_unique_patients(
     query = db.query(SkinDiseaseImage.persona_digits)
 
     if validation_status == "validated":
-        # Filter for entries where doctor_name is not NULL and not an empty string
+        
         query = query.filter(SkinDiseaseImage.doctor_name.isnot(None), SkinDiseaseImage.doctor_name != '')
     elif validation_status == "unvalidated":
-        # Filter for entries where doctor_name is NULL or an empty string
+        
         query = query.filter(or_(SkinDiseaseImage.doctor_name.is_(None), SkinDiseaseImage.doctor_name == ''))
-    # If validation_status is 'all' or any other value, no filter is applied
+    
 
     unique_personas = query.distinct().all()
-    # Extract the string from the tuple and filter out any None values
+    
     return sorted([persona[0] for persona in unique_personas if persona[0] is not None])
 from sqlalchemy.sql import or_
 
-# Get Images for a Specific Patient ID (with validation filter) ---
+
 @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
 async def get_patient_images(
     persona_digits: str,
@@ -638,9 +629,6 @@ async def get_patient_images(
     return images_data
 
 
-
-
-
 @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
 async def classify_skin_tone(
     persona_digits: str,
@@ -649,10 +637,7 @@ async def classify_skin_tone(
 ):
     
     try:
-        # The frontend sends doctor_name and fitzpatrick_scale.
-        # We will apply this classification to all images for the given persona_digits
-        # that are currently 'unvalidated' (doctor_name is NULL or empty).
-        # If an image for this persona_digits already has a doctor_name, a new entry will be created.
+        
 
         skin_disease_images = db.query(SkinDiseaseImage).filter(
             SkinDiseaseImage.persona_digits == persona_digits
@@ -668,7 +653,7 @@ async def classify_skin_tone(
         created_count = 0
 
         for image_entry in skin_disease_images:
-            # Determine image/mask/crop paths for the SkinToneClassification log entry
+            
             image_name_log = image_entry.image_name
             image_path_log = image_entry.image_path
             mask_name_log = image_entry.mask_name
@@ -694,16 +679,15 @@ async def classify_skin_tone(
             # )
             # db.add(new_classification_log)
 
-            # Conditionally update or create entries in SkinDiseaseImage
+            
             if image_entry.doctor_name is None or image_entry.doctor_name == "":
-                # Condition 1: Doctor name is not set, so UPDATE the existing entry
+                
                 image_entry.doctor_name = classification_data.doctor_name
                 image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
                 updated_count += 1
                 print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
             else:
-                # Condition 2: Doctor name is already set, so CREATE a new entry
-                # This ensures a history of classifications by different doctors or re-classifications
+                
                 new_skin_disease_image_entry = SkinDiseaseImage(
                     disease_name_amended=image_entry.disease_name_amended,
                     disease_name=image_entry.disease_name,
@@ -763,7 +747,7 @@ async def download_skin_disease_excel(db: Session = Depends(get_db)):
     if not images:
         raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
 
-    # Use only defined column names
+    
     column_names = [column.name for column in SkinDiseaseImage.__table__.columns]
     data = [{col: getattr(image, col) for col in column_names} for image in images]
 
@@ -785,7 +769,7 @@ def export_categorize_excel(db: Session = Depends(get_db)):
     if not images:
         raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
 
-    # Use only defined column names
+    
     column_names = [column.name for column in DoctorImageValidation.__table__.columns]
     data = [{col: getattr(image, col) for col in column_names} for image in images]
 
@@ -827,7 +811,7 @@ def populate_crop_data_flat(image_root: str, db: Session = Depends(get_db)):
                     example_path = os.path.join(persona_path, example_dir)
 
 
-                    # Assumes original image is same as crop name minus "_crop"
+                    
                     for filename in os.listdir(example_path):
                         if not (filename.endswith(".png") or filename.endswith(".jpg")):
                             continue
@@ -838,11 +822,10 @@ def populate_crop_data_flat(image_root: str, db: Session = Depends(get_db)):
                         is_mask = "_mask" in filename
                         relative_path = os.path.join(amended_dir, disease_dir, persona_dir, example_dir, filename)
 
-                        # Try to infer base image name (original image this crop is derived from)
-                        # E.g., if filename is "abc_crop.png", base is "abc.png"
+                        
                         base_image_name = filename.replace("_crop", "").replace("_mask", "")
 
-                        # Query matching DB entry (specific image)
+                        
                         entry = db.query(SkinDiseaseImage).filter_by(
                             disease_name_amended=amended_dir,
                             disease_name=disease_dir,
@@ -885,15 +868,10 @@ async def update_image_fields(image_id: int, update_data: UpdateImageFields, db:
     return {"message": "Image updated successfully"}
 
 
-
-
-
 router = APIRouter()
-
 BASE_IMAGE_DIR = "images"
 DISEASE_DIR = os.path.join(BASE_IMAGE_DIR, "disease")
 NON_DISEASE_DIR = os.path.join(BASE_IMAGE_DIR, "non-disease")
-
 
 
 def move_and_rename_file(src_path: str, dest_dir: str) -> str:
@@ -912,11 +890,7 @@ def move_and_rename_file(src_path: str, dest_dir: str) -> str:
         suffix += 1
 
     shutil.move(src_path, dest_path)
-    return os.path.basename(dest_path)  # Return new filename only
-
-
-
-
+    return os.path.basename(dest_path) 
 
 
 # const payload = {
@@ -934,14 +908,8 @@ def move_and_rename_file(src_path: str, dest_dir: str) -> str:
 #             };
 
 
-
 router = APIRouter()
-
 IMAGE_DIR = "/images/categorized_images"
-
-
-
-
 
 
 ################ -------------------------------------   CATEGRIZE IMAGES MODULE --------------------------------########################
@@ -977,7 +945,6 @@ def move_to_target_directory_with_unique_name(src_path: str, target_dir: str):
 
     shutil.move(src_path, dest_path)
     
-    # Returns the base file name and the absolute path
     return os.path.basename(dest_path), dest_path
 
 # CATEGORIZE IMAGES (CATEGORIZE_IMAGES.HTML)
@@ -1014,15 +981,14 @@ def submit_validation(
     crop_image_src_file = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop.jpg")
     crop_mask_src_file = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop_mask.jpg")
 
-    # Moving the crop and crop mask files to the target directory after the update button is pressed
-    # New files' names will be created if there already exists a file with the same name
+    
     crop_new_filename, crop_abs_path = move_to_target_directory_with_unique_name(crop_image_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
     crop_mask_new_filename, crop_mask_abs_path = move_to_target_directory_with_unique_name(crop_mask_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
 
     crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
     crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
 
-    # Creating an Object for adding the row to the db
+    
     db_row = DoctorImageValidation(
         image_path=None,
         mask_path=None,
@@ -1070,11 +1036,10 @@ def submit_validation(
 
 @app.get("/get_image_set/{image_name}")
 async def get_image_set(image_name: str):
-    base_dir = "path/to/your/images"  # Update to actual directory
-
-    # Construct expected file names
+    base_dir = "path/to/your/images"  
+    
     image_set = {
-        "original": f"{image_name}.jpg",  # or .png depending on your case
+        "original": f"{image_name}.jpg",  
         "original_mask": f"{image_name}_mask.jpg",
         "crop": f"{image_name}_crop.jpg",
         "crop_mask": f"{image_name}_crop_mask.jpg"
@@ -1084,20 +1049,20 @@ async def get_image_set(image_name: str):
     for key, filename in image_set.items():
         file_path = os.path.join(base_dir, filename)
         if os.path.exists(file_path):
-            image_urls[key] = f"/static/images/{filename}"  # Assumes you're serving images via static
+            image_urls[key] = f"/static/images/{filename}" 
         else:
-            image_urls[key] = None  # Or raise 404 depending on needs
+            image_urls[key] = None  
 
     return JSONResponse(content=image_urls)
 
-@app.get("/get_skin_disease_data/") # Keeping the endpoint name consistent
+@app.get("/get_skin_disease_data/") 
 async def get_skin_disease_data(db: Session = Depends(get_db)):
     
     images = db.query(SkinDiseaseImage).all()
     if not images:
         raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
 
-    # Convert SQLAlchemy objects to a list of dictionaries, including all fields
+    
     data = []
     for image in images:
         data.append({
@@ -1135,13 +1100,12 @@ async def get_skin_disease_data(db: Session = Depends(get_db)):
 
 @app.get("/get_categorized_excel_data/")
 def get_categorized_excel_data(db: Session = Depends(get_db)):
-    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    
     images = db.query(DoctorImageValidation).all()
     if not images:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
 
-    # Use only defined column names for DoctorImageValidation
-    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    
     column_names = [column.name for column in DoctorImageValidation.__table__.columns]
     data = []
     for image in images:
@@ -1256,20 +1220,20 @@ def submit_batch_categorization(
         records_to_add.append(db_record)
 
     try:
-        # Add all records to the session
+        
         db.add_all(records_to_add) 
         db.commit()
         
         responses_to_return = []
         for record in records_to_add:
-            # Refresh each record to get its DB-generated ID and created_at
+            
             db.refresh(record) 
 
-            # Explicitly create the Pydantic response object
+            
             responses_to_return.append(
                 CropImageValidationResponse(
                     id=record.id,
-                    image_filename=os.path.basename(record.image_filename), # Extract filename from image_path
+                    image_filename=os.path.basename(record.image_filename), 
                     image_path=record.image_path,
                     doctor_name=record.doctor_name,
                     comments=record.comments,
@@ -1279,7 +1243,7 @@ def submit_batch_categorization(
                 )
             )
         
-        return responses_to_return # Return the list of Pydantic response objects
+        return responses_to_return 
 
     except Exception as error_:
         db.rollback()
@@ -1292,13 +1256,11 @@ def submit_batch_categorization(
 
 @app.get("/get_excel_data_categorized_images_crops_batch/")
 def get_categorized_excel_data(db: Session = Depends(get_db)):
-    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    
     images = db.query(CropImageValidation).all()
     if not images:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
-
-    # Use only defined column names for DoctorImageValidation
-    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    
     column_names = [column.name for column in CropImageValidation.__table__.columns]
     data = []
     for image in images:
@@ -1315,20 +1277,17 @@ def get_categorized_excel_data(db: Session = Depends(get_db)):
 
 @app.post("/create_new_categorization/", response_model=DoctorImageValidationResponse)
 async def create_new_categorization(
-    data: DoctorImageValidationRequest, # Use the request schema
+    data: DoctorImageValidationRequest, 
     db: Session = Depends(get_db),
 ):
     
-    # Create a new instance of the model with the data from the request
-    # Note: 'id' and 'created_at' will be handled by the database (auto-increment/default)
     new_db_entry = DoctorImageValidation(
-        image_path=None,#data.image_path, # These are crucial for the new entry
+        image_path=None,#data.image_path, 
         mask_path=None,#data.mask_path,
         crop_path=data.crop_path,
         crop_mask_path=data.crop_mask_path,
         doctor_name=data.doctor_name,
         mask_rating = data.mask_rating,
-        #rating=data.rating,
         comments=data.comments,
         mask_comments=data.mask_comments,
         disease_name=None,#data.disease_name,
@@ -1348,25 +1307,13 @@ async def create_new_categorization(
     db.commit()
     db.refresh(new_db_entry)
 
-    # You might want to handle file duplication here if the image_path/mask_path
-    # needs to be physically duplicated for a "new" entry, rather than just referencing
-    # the existing files. For now, it just creates a new DB record pointing to existing files.
-    # If you need to duplicate files, you'd add os.path.copy2 logic here,
-    # and update new_db_entry.image_path and new_db_entry.mask_path accordingly.
-
     return new_db_entry
 
 
 
-
-
-# Directory containing the original unvalidated crop images
 CROP_IMAGES_SOURCE_DIR = os.path.join("images", "classify_skin_disease_crops_images")
-
-# New directory where categorized crop images will be moved
 CATEGORIZED_CROP_IMAGES_DIR = os.path.join(CROP_IMAGES_SOURCE_DIR, "categorized")
 
-# Ensure the necessary directories exist
 os.makedirs(CROP_IMAGES_SOURCE_DIR, exist_ok=True)
 os.makedirs(CATEGORIZED_CROP_IMAGES_DIR, exist_ok=True)
 
@@ -1382,7 +1329,7 @@ def get_unique_filename(directory: str, original_filename: str) -> str:
     return new_filename
 
 
-# Route to get a batch of RANDOM crop image paths for validation
+
 @app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
 async def get_crop_images_for_validation(
     limit: int = 15,
@@ -1414,7 +1361,7 @@ async def get_crop_images_for_validation(
 
     return image_metadata_list
 
-# Route to submit a batch of crop image rating data and move the files
+
 @app.post("/submit_crop_validations/", status_code=status.HTTP_201_CREATED)
 async def submit_crop_validations(
     batch_data: BatchCropImageRatingRequest,
@@ -1427,7 +1374,7 @@ async def submit_crop_validations(
 
     for rating_data in batch_data.validations:
         try:
-            # 1. Check if an entry for this image_path already exists in the database
+            
             existing_entry = db.query(CropImageRating).filter(
                 CropImageRating.image_path == rating_data.image_path
             ).first()
@@ -1436,7 +1383,7 @@ async def submit_crop_validations(
                 print(f"Warning: Rating for {rating_data.image_path} already exists. Skipping database entry and file move.")
                 continue
 
-            # 2. Create new database entry
+            
             new_entry = CropImageRating(
                 image_path=rating_data.image_path,
                 doctor_name=rating_data.doctor_name,
@@ -1447,16 +1394,16 @@ async def submit_crop_validations(
             db.add(new_entry)
             new_db_entries_count += 1
 
-            # 3. Move the physical image file
+            
             relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
             source_file_abs_path = os.path.join("images", relative_file_path_from_base_static)
 
             if not os.path.exists(source_file_abs_path):
                 print(f"File not found for moving: {source_file_abs_path}. Skipping file move.")
                 errors.append(f"File not found for {rating_data.image_path}. (DB entry added)")
-                continue # Do not attempt to move if source file doesn't exist
+                continue 
 
-            # --- Apply unique filename logic here ---
+            
             original_basename = os.path.basename(source_file_abs_path)
             unique_filename_for_destination = get_unique_filename(CATEGORIZED_CROP_IMAGES_DIR, original_basename)
             destination_file_abs_path = os.path.join(CATEGORIZED_CROP_IMAGES_DIR, unique_filename_for_destination)
@@ -1502,13 +1449,12 @@ async def submit_crop_validations(
 
 @app.get("/get_excel_data_categorized_doctor_skin_disease_crops_rating_batch/")
 def get_categorized_excel_data(db: Session = Depends(get_db)):
-    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    
     images = db.query(CropImageRating).all()
     if not images:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
 
-    # Use only defined column names for DoctorImageValidation
-    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    
     column_names = [column.name for column in CropImageRating.__table__.columns]
     data = []
     for image in images:
@@ -1528,22 +1474,16 @@ from app.schemas import SingleCropImageMetadata, SingleCropQualityRatingRequest
 
 STATIC_DIR = "images"
 
-# Directory for images to be rated by crop quality (new source for this task)
+
 CROP_QUALITY_RATING_SOURCE_DIR = os.path.join(STATIC_DIR, "crop_quality_rating_images")
-
-# Destination directory for images after they are rated by crop quality
 CROP_QUALITY_RATING_CHECKED_DIR = os.path.join(CROP_QUALITY_RATING_SOURCE_DIR, "checked")
-
-# Existing directory for batch image validation (from previous task)
 CROP_IMAGES_SOURCE_DIR = os.path.join(STATIC_DIR, "classify_skin_disease_crops_images")
 CATEGORIZED_CROP_IMAGES_DIR = os.path.join(CROP_IMAGES_SOURCE_DIR, "categorized")
 
-
-# Ensure directories exist
 os.makedirs(CROP_QUALITY_RATING_SOURCE_DIR, exist_ok=True)
 os.makedirs(CROP_QUALITY_RATING_CHECKED_DIR, exist_ok=True)
 
-# --- ROUTE: Get a single random unrated image for crop quality rating ---
+
 @app.get("/get_next_crop_quality_rating_image/", response_model=Optional[SingleCropImageMetadata])
 async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
     
@@ -1554,7 +1494,7 @@ async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
     ]
     all_image_filenames.sort()
 
-    # Query the NEW table name: models.CropImageQualityRating
+    
     rated_image_urls = db.query(CropImageQualityRating.image_path).filter(
         CropImageQualityRating.image_path.like(f"/images/crop_quality_rating_images/%")
     ).all()
@@ -1567,7 +1507,7 @@ async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
             unrated_image_filenames.append(filename)
 
     if not unrated_image_filenames:
-        return None # No more unrated images
+        return None 
 
     random_filename = random.choice(unrated_image_filenames)
     image_path_for_response = f"/images/crop_quality_rating_images/{random_filename}"
@@ -1575,7 +1515,6 @@ async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
     return SingleCropImageMetadata(image_path=image_path_for_response)
 
 
-# --- ROUTE: Submit a single crop quality rating and move the file ---
 @app.post("/submit_crop_quality_rating/", status_code=status.HTTP_201_CREATED)
 async def submit_crop_quality_rating(
     rating_data: SingleCropQualityRatingRequest,
@@ -1583,7 +1522,7 @@ async def submit_crop_quality_rating(
 ):
     
     try:
-        # Query the NEW table name: models.CropImageQualityRating
+        
         existing_entry = db.query(CropImageQualityRating).filter(
             CropImageQualityRating.image_path == rating_data.image_path
         ).first()
@@ -1594,7 +1533,7 @@ async def submit_crop_quality_rating(
                 detail=f"Image {rating_data.image_path} has already been rated."
             )
 
-        # Create new database entry using the NEW model: models.CropImageQualityRating
+        
         new_entry = CropImageQualityRating(
             image_path=rating_data.image_path,
             doctor_name=rating_data.doctor_name,
@@ -1603,7 +1542,7 @@ async def submit_crop_quality_rating(
 
         )
         db.add(new_entry)
-        db.commit() # Commit immediately for single entry
+        db.commit() 
         db.refresh(new_entry)
 
         relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
@@ -1646,13 +1585,12 @@ async def submit_crop_quality_rating(
 
 @app.get("/get_excel_data_categorized_doctor_skin_disease_crops_rating_single_image/")
 def get_categorized_excel_data(db: Session = Depends(get_db)):
-    # Now DoctorImageValidation is directly imported, so you don't need 'models.' prefix
+    
     images = db.query(CropImageQualityRating).all()
     if not images:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No entries found in the doctor image validation table.")
 
-    # Use only defined column names for DoctorImageValidation
-    # You also need to directly refer to DoctorImageValidation here, not models.DoctorImageValidation
+    
     column_names = [column.name for column in CropImageQualityRating.__table__.columns]
     data = []
     for image in images:
@@ -1672,13 +1610,13 @@ async def get_image_subdirectories():
     
     subdirectories = []
     try:
-        # List all entries in the base static directory
+        
         for entry in os.listdir(STATIC_DIR):
             full_path = os.path.join(STATIC_DIR, entry)
-            # Check if it's a directory and not a hidden directory (e.g., .git, .DS_Store)
+            
             if os.path.isdir(full_path) and not entry.startswith('.'):
                 subdirectories.append(entry)
-        subdirectories.sort() # Keep them sorted alphabetically
+        subdirectories.sort() 
     except Exception as e:
         print(f"Error listing subdirectories: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve subdirectories.")
@@ -1689,16 +1627,15 @@ async def get_image_subdirectories():
 
 @app.post("/upload_images/")
 async def upload_images(
-    files: List[UploadFile] = File(...), # List of uploaded files
-    subdirectory: Optional[str] = Form(None) # Optional subdirectory name from form data
+    files: List[UploadFile] = File(...), 
+    subdirectory: Optional[str] = Form(None) 
 ):
     
     uploaded_file_names = []
     
-    # Determine the target directory
+    
     if subdirectory:
-        # Sanitize subdirectory name to prevent path traversal attacks
-        # Path.as_posix() converts to forward slashes, and ".." check prevents going up
+        
         sanitized_subdirectory = Path(subdirectory).as_posix()
         if ".." in sanitized_subdirectory or sanitized_subdirectory.startswith("/"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid subdirectory name.")
@@ -1707,7 +1644,7 @@ async def upload_images(
     else:
         target_directory = STATIC_DIR
 
-    # Create the target directory if it doesn't exist
+    
     os.makedirs(target_directory, exist_ok=True)
 
     for file in files:

@@ -15,7 +15,6 @@ from typing import List, Tuple, Optional, List
 from fastapi import UploadFile, File, FastAPI, HTTPException, Depends, Form, Query, status, APIRouter
 from fastapi.staticfiles import StaticFiles
 
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 
 from sqlalchemy.orm import Session
@@ -39,32 +38,10 @@ def get_db():
 
 app = FastAPI()
 
-origins = [
-    "https://192.168.15.7:8000", # Your backend itself (often good to include)
-    "http://localhost:8080",    # If you're serving HTML locally via http.server
-    "http://127.0.0.1:8080",    # Alternative localhost
-    "file://",                  # If opening HTML directly from your computer (common)
-    "null",                     # Also if opening HTML directly from your computer (common fallback)
-    "http://192.168.15.7:8080", # If your server serves the frontend HTML on this port
-    "https://192.168.15.7",     # If your server serves frontend HTML on standard HTTPS port
-    "*",                         # FOR DEVELOPMENT ONLY: Allows all origins. Use with CAUTION.
-    "https://medicalimages.apice.unibo.it"                            # If using '*', you generally shouldn't allow credentials.
-                                # It's best to be specific.
-]
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (for development, specify origins in production)
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
-)
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/frontend", StaticFiles(directory="/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/frontend"), name="static_frontend")
 
-# Redirect root to the main HTML file
 @app.get("/")
 async def root():
     return RedirectResponse(url="/frontend/main.html")
@@ -79,20 +56,7 @@ app.mount("/skin_disease_data2", StaticFiles(directory=skin_disease_crop_data_pa
 
 
 def find_image_pair(directory="images") -> List[Tuple[str, str]]:
-    """
-    Finds pairs of original and mask images in the given directory.
-    Assumes that original images and mask images have the same base name,
-    and mask images have '_mask' appended before the extension.
-
-    For example:
-    original image:  'image1.jpg'
-    mask image:      'image1_mask.jpg'
-
-    Returns:
-        A list of tuples, where each tuple contains the original image filename
-        and the corresponding mask image filename.
-        Returns an empty list if no pairs are found.
-    """
+    
     image_pairs = []
     try:
         for filename in os.listdir(directory):

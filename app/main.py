@@ -138,8 +138,7 @@ async def get_next_uncategorized_image(current_displayed_filename: str):
 @app.post("/categorize_image/")
 async def submit_categorization(
     current_filename: str = Form(...),  
-    doctor_name: str = Form(...),
-    #years_of_experience: int = Form(...),  
+    doctor_name: str = Form(...),  
     rating: int = Form(...),
     comments: Optional[str] = Form(None),
     mask_comments: Optional[str] = Form(None),
@@ -259,10 +258,7 @@ async def update_image_details(
     fitzpatrick_scale: Optional[str] = Form(None), 
     db: Session = Depends(get_db),
 ):
-    """
-    Updates the details of an image in the database and moves the image files
-    if the category has changed.
-    """
+    
     db_image = db.query(DoctorImageValidation).filter(DoctorImageValidation.id == image_id).first()
     if not db_image:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -271,9 +267,7 @@ async def update_image_details(
     old_image_path = db_image.image_path
     old_mask_path = db_image.mask_path
 
-    # Update the database record
     db_image.doctor_name = doctor_name
-    #db_image.years_of_experience = years_of_experience 
     db_image.rating = rating
     db_image.comments = comments
     db_image.mask_comments = mask_comments
@@ -653,12 +647,7 @@ async def classify_skin_tone(
     classification_data: SkinToneClassificationRequest, # Expecting JSON body from frontend
     db: Session = Depends(get_db)
 ):
-    """
-    Classifies the skin tone for a given patient (persona_digits) by a specific doctor.
-    - Always creates a new entry in SkinToneClassification (logging each classification event).
-    - Conditionally updates or creates entries in SkinDiseaseImage based on existing doctor_name.
-    - No image directory is moved.
-    """
+    
     try:
         # The frontend sends doctor_name and fitzpatrick_scale.
         # We will apply this classification to all images for the given persona_digits
@@ -814,17 +803,7 @@ def export_categorize_excel(db: Session = Depends(get_db)):
 
 @app.post("/populate_crops_single_table/")
 def populate_crop_data_flat(image_root: str, db: Session = Depends(get_db)):
-    """
-    Update crop image and mask info in SkinDiseaseImage table.
-    Only updates fields if filename contains '_crop'.
-
-    Matches by:
-      - disease_name_amended
-      - disease_name
-      - persona_digits
-      - example_digit
-      - image_name (base image, not the crop one)
-    """
+    
     for amended_dir in os.listdir(image_root):
         amended_path = os.path.join(image_root, amended_dir)
         if not os.path.isdir(amended_path):
@@ -918,10 +897,7 @@ NON_DISEASE_DIR = os.path.join(BASE_IMAGE_DIR, "non-disease")
 
 
 def move_and_rename_file(src_path: str, dest_dir: str) -> str:
-    """
-    Moves a file to destination directory, adds suffix if filename exists,
-    returns new filename.
-    """
+    
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
@@ -1116,10 +1092,7 @@ async def get_image_set(image_name: str):
 
 @app.get("/get_skin_disease_data/") # Keeping the endpoint name consistent
 async def get_skin_disease_data(db: Session = Depends(get_db)):
-    """
-    Retrieves all skin disease image entries from the database as JSON.
-    Includes all fields from the SkinDiseaseImage model.
-    """
+    
     images = db.query(SkinDiseaseImage).all()
     if not images:
         raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
@@ -1345,10 +1318,7 @@ async def create_new_categorization(
     data: DoctorImageValidationRequest, # Use the request schema
     db: Session = Depends(get_db),
 ):
-    """
-    Creates a new categorization entry in the database based on the provided data.
-    The new entry will have a new ID. Image paths will be copied if needed.
-    """
+    
     # Create a new instance of the model with the data from the request
     # Note: 'id' and 'created_at' will be handled by the database (auto-increment/default)
     new_db_entry = DoctorImageValidation(
@@ -1418,10 +1388,7 @@ async def get_crop_images_for_validation(
     limit: int = 15,
     db: Session = Depends(get_db)
 ):
-    """
-    Fetches a batch of RANDOM crop image paths that have NOT yet been
-    validated (i.e., not in the crop_image_rating table).
-    """
+    
     all_image_filenames = [
         f for f in os.listdir(CROP_IMAGES_SOURCE_DIR)
         if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
@@ -1579,10 +1546,7 @@ os.makedirs(CROP_QUALITY_RATING_CHECKED_DIR, exist_ok=True)
 # --- ROUTE: Get a single random unrated image for crop quality rating ---
 @app.get("/get_next_crop_quality_rating_image/", response_model=Optional[SingleCropImageMetadata])
 async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
-    """
-    Fetches a single random image path from 'crop_quality_rating_images' that
-    has not yet been rated in the 'crop_image_quality_rating' table.
-    """
+    
     all_image_filenames = [
         f for f in os.listdir(CROP_QUALITY_RATING_SOURCE_DIR)
         if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
@@ -1705,9 +1669,7 @@ def get_categorized_excel_data(db: Session = Depends(get_db)):
 
 @app.get("/get_image_subdirectories/", response_model=List[str])
 async def get_image_subdirectories():
-    """
-    Returns a list of subdirectory names within the BASE_STATIC_DIR.
-    """
+    
     subdirectories = []
     try:
         # List all entries in the base static directory
@@ -1730,10 +1692,7 @@ async def upload_images(
     files: List[UploadFile] = File(...), # List of uploaded files
     subdirectory: Optional[str] = Form(None) # Optional subdirectory name from form data
 ):
-    """
-    Uploads one or more image files to a specified subdirectory within the BASE_STATIC_DIR.
-    If no subdirectory is provided, files are uploaded directly to BASE_STATIC_DIR.
-    """
+    
     uploaded_file_names = []
     
     # Determine the target directory

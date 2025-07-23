@@ -4,48 +4,31 @@ import shutil
 import pandas as pd
 import logging
 import random
+from http import HTTPStatus
+from pathlib import Path
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from starlette.responses import RedirectResponse
+from typing import List, Tuple, Optional, List
 
 
-from fastapi import UploadFile, File, Form, HTTPException, status
-from fastapi.responses import HTMLResponse # Ensure HTMLResponse is imported for the root route
+from fastapi import UploadFile, File, FastAPI, HTTPException, Depends, Form, Query, status, APIRouter
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path # For robust path handling
 
-from fastapi import FastAPI, HTTPException, Depends, Form, Query
-from fastapi import status
-from fastapi import FastAPI, Depends, HTTPException
-
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse, FileResponse
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text, text
 from sqlalchemy.exc import OperationalError, IntegrityError
-from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor, SkinDiseaseImage, SessionLocal, CropImageValidation ,CropImageRating
-from app.models import CropImageQualityRating
-
+from app.models import DoctorImageValidation, SessionLocal, engine, Base, Doctor, SkinDiseaseImage, SessionLocal, CropImageValidation ,CropImageRating, \
+    CropImageQualityRating, DoctorImageValidation
 
 from app.schemas import DoctorImageValidationResponse, DoctorSchema, CropImageValidationResponse, CropImageValidationRequest, \
     DoctorImageValidationUpdateRequest, SkinDiseaseImageResponse, SkinDiseaseImageModel, SkinDiseaseImageResponse, PatientImageMetadata, \
     SkinToneClassificationResponse, SkinToneClassificationRequest, BatchCropImageRatingRequest, CropImageMetadata, SkinToneClassificationRequest, \
-        SkinToneClassificationResponse
-
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
-from app.models import DoctorImageValidation
-from app.schemas import DoctorImageValidationRequest, DoctorImageValidationResponse, CropImageValidationResponse, CropImageValidationRequest
-
-
-from typing import List, Tuple, Optional, List
-
-
-from http import HTTPStatus
-
+        SkinToneClassificationResponse, DoctorImageValidationRequest, DoctorImageValidationResponse, CropImageValidationResponse, CropImageValidationRequest, \
+            CropImageValidationResponse
 
 def get_db():
     db = SessionLocal()
@@ -79,10 +62,6 @@ app.add_middleware(
 )
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
-# Mount static files at a path, e.g., /static-frontend
-# Make sure the directory path is correct on your VM
-# ensure 'main.html' and other frontend files are actually
-# inside a 'frontend' sub-directory within this specified path.
 app.mount("/frontend", StaticFiles(directory="/root/Unibo_Doctor_App/Unibo_Doctors_Application-main (1) (2)/Unibo_Doctors_Application-main/frontend"), name="static_frontend")
 
 # Redirect root to the main HTML file
@@ -91,7 +70,7 @@ async def root():
     return RedirectResponse(url="/frontend/main.html")
 
 
-# --- Serve skin disease images from the external hard drive at a NEW prefix ---
+######### ----------------------- Serve skin disease images from the external hard drive at a NEW prefix ---------------------------#################
 skin_disease_data_path = "/root/test_data" #"/media/verbose193/E0909AEF909ACB82/Thesis Working Directory/Skin disesases data"
 app.mount("/skin_disease_data", StaticFiles(directory=skin_disease_data_path), name="skin_disease_data")
 
@@ -133,9 +112,7 @@ def find_image_pair(directory="images") -> List[Tuple[str, str]]:
 
 @app.get("/categorize_image/", response_model=Optional[DoctorImageValidationResponse])
 async def get_first_uncategorized_image():
-    """
-    Retrieves the first uncategorized image pair.
-    """
+    
     image_pairs = list(find_image_pair())
     if image_pairs:
         first_base, first_mask = image_pairs[0]
@@ -155,9 +132,7 @@ async def get_first_uncategorized_image():
 
 @app.get("/categorize_image/{current_displayed_filename}", response_model=Optional[DoctorImageValidationResponse])
 async def get_next_uncategorized_image(current_displayed_filename: str):
-    """
-    Retrieves the next uncategorized image pair after the given filename.
-    """
+    
     image_pairs = list(find_image_pair())
     current_base_filename, _ = os.path.splitext(current_displayed_filename)
     current_pair = None
@@ -198,27 +173,25 @@ async def get_next_uncategorized_image(current_displayed_filename: str):
 
 @app.post("/categorize_image/")
 async def submit_categorization(
-    current_filename: str = Form(...),  # Base filename (without _mask)
+    current_filename: str = Form(...),  
     doctor_name: str = Form(...),
-    #years_of_experience: int = Form(...),  # Feature 1
+    #years_of_experience: int = Form(...),  
     rating: int = Form(...),
     comments: Optional[str] = Form(None),
     mask_comments: Optional[str] = Form(None),
     disease_name: str = Form(...),
     category: str = Form(...),
-    real_generated: str = Form(...),  # Feature 2
-    realism_rating: Optional[int] = Form(None),  # Feature 2
-    image_precision: str = Form(...),  # Feature 2
-    skin_color_precision: Optional[int] = Form(None),  # Feature 2
-    confidence_level: Optional[int] = Form(None),  # Feature 2
-    crop_quality_rating: Optional[int] = Form(None),  # Feature 3
-    crop_diagnosis: str = Form(...),  # Feature 3
-    fitzpatrick_scale: Optional[str] = Form(None),  # Feature 4
+    real_generated: str = Form(...),  
+    realism_rating: Optional[int] = Form(None),  
+    image_precision: str = Form(...),  
+    skin_color_precision: Optional[int] = Form(None),  
+    confidence_level: Optional[int] = Form(None),  
+    crop_quality_rating: Optional[int] = Form(None),  
+    crop_diagnosis: str = Form(...),  
+    fitzpatrick_scale: Optional[str] = Form(None),  
     db: Session = Depends(get_db),
 ):
-    """
-    Saves the categorization details to the database and moves the image files.
-    """
+    
     base_name, ext = os.path.splitext(current_filename)
     original_filename = f"{base_name}{ext}"
     mask_filename = f"{base_name}_mask{ext}"
@@ -246,9 +219,7 @@ async def submit_categorization(
     destination_mask_path = os.path.join(destination_dir, mask_filename)
 
     def move_file_with_collision_handling(source, destination):
-        """
-        Moves a file, handling potential filename collisions.
-        """
+        
         if os.path.exists(destination):
             name, ext = os.path.splitext(os.path.basename(source))
             counter = 1
@@ -274,7 +245,7 @@ async def submit_categorization(
         db_image.image_path = os.path.join("images", category, new_original_filename)
         db_image.mask_path = os.path.join("images", category, new_mask_filename)
 
-        # Update the additional fields
+        
         #db_image.years_of_experience = years_of_experience
         db_image.real_generated = real_generated
         db_image.realism_rating = realism_rating
@@ -298,9 +269,7 @@ async def submit_categorization(
 
 @app.get("/disease_images/{disease_name}", response_model=List[DoctorImageValidationResponse])
 async def get_disease_images(disease_name: str, db: Session = Depends(get_db)):
-    """
-    Retrieves images for a specific disease.
-    """
+    
     images = db.query(DoctorImageValidation).filter(
         DoctorImageValidation.disease_name == disease_name
     ).all()
@@ -309,22 +278,21 @@ async def get_disease_images(disease_name: str, db: Session = Depends(get_db)):
 
 @app.post("/update_image_details/{image_id}")
 async def update_image_details(
-    image_id: int, # Changed from Form to int
+    image_id: int, 
     doctor_name: str = Form(...),
-    #years_of_experience: int = Form(...),  # Feature 1
     rating: int = Form(...),
     comments: Optional[str] = Form(None),
     mask_comments: Optional[str] = Form(None),
     disease_name: str = Form(...),
     category: str = Form(...),
-    real_generated: str = Form(...),  # Feature 2
-    realism_rating: Optional[int] = Form(None),  # Feature 2
-    image_precision: str = Form(...),  # Feature 2
-    skin_color_precision: Optional[int] = Form(None),  # Feature 2
-    confidence_level: Optional[int] = Form(None),  # Feature 2
-    crop_quality_rating: Optional[int] = Form(None),  # Feature 3
-    crop_diagnosis: str = Form(...),  # Feature 3
-    fitzpatrick_scale: Optional[str] = Form(None),  # Feature 4
+    real_generated: str = Form(...),  
+    realism_rating: Optional[int] = Form(None),  
+    image_precision: str = Form(...),  
+    skin_color_precision: Optional[int] = Form(None),  
+    confidence_level: Optional[int] = Form(None),  
+    crop_quality_rating: Optional[int] = Form(None),  
+    crop_diagnosis: str = Form(...),  
+    fitzpatrick_scale: Optional[str] = Form(None), 
     db: Session = Depends(get_db),
 ):
     """
@@ -335,27 +303,27 @@ async def update_image_details(
     if not db_image:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    old_category = db_image.category  # Store the old category
+    old_category = db_image.category  
     old_image_path = db_image.image_path
     old_mask_path = db_image.mask_path
 
     # Update the database record
     db_image.doctor_name = doctor_name
-    #db_image.years_of_experience = years_of_experience # Feature 1
+    #db_image.years_of_experience = years_of_experience 
     db_image.rating = rating
     db_image.comments = comments
     db_image.mask_comments = mask_comments
     db_image.disease_name = disease_name
     db_image.category = category
-    db_image.real_generated = real_generated # Feature 2
-    db_image.realism_rating = realism_rating # Feature 2
-    db_image.image_precision = image_precision # Feature 2
-    db_image.skin_color_precision = skin_color_precision # Feature 2
-    db_image.confidence_level = confidence_level # Feature 2
-    db_image.crop_quality_rating = crop_quality_rating # Feature 3
-    db_image.crop_diagnosis = crop_diagnosis # Feature 3
-    db_image.fitzpatrick_scale = fitzpatrick_scale # Feature 4
-    db.commit()  # Commit the changes *before* moving files
+    db_image.real_generated = real_generated 
+    db_image.realism_rating = realism_rating 
+    db_image.image_precision = image_precision 
+    db_image.skin_color_precision = skin_color_precision 
+    db_image.confidence_level = confidence_level 
+    db_image.crop_quality_rating = crop_quality_rating 
+    db_image.crop_diagnosis = crop_diagnosis 
+    db_image.fitzpatrick_scale = fitzpatrick_scale 
+    db.commit()  
 
     # Move files if the category has changed
     if old_category != category:
@@ -369,9 +337,7 @@ async def update_image_details(
             destination_mask_path = os.path.join(destination_dir, os.path.basename(old_mask_path))
 
             def move_file_with_collision_handling(source, destination):
-                """
-                Moves a file, handling filename collisions.
-                """
+                
                 if os.path.exists(destination):
                     name, ext = os.path.splitext(os.path.basename(source))
                     counter = 1
@@ -412,9 +378,7 @@ async def update_image_details(
 
 @app.get("/download_excel/")
 async def download_categorizations_excel(db: Session = Depends(get_db)):
-    """
-    Downloads all categorization entries from the database as an Excel file.
-    """
+    
     categorizations = db.query(DoctorImageValidation).all()
     if not categorizations:
         raise HTTPException(
@@ -445,10 +409,7 @@ async def filter_categorizations(
     disease_name: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    """
-    Filters categorization entries by category and optionally by disease name.
-    Returns a list of DoctorImageValidationResponse objects.
-    """
+    
     query = db.query(DoctorImageValidation).filter(DoctorImageValidation.category == category)
     if disease_name:
         query = query.filter(DoctorImageValidation.disease_name == disease_name)
@@ -474,17 +435,13 @@ async def filter_categorizations(
 
 @app.get("/all_categorizations/", response_model=List[DoctorImageValidationResponse])
 async def get_all_categorizations(db: Session = Depends(get_db)):
-    """
-    Retrieves all categorization entries from the database.
-    """
+    
     return db.query(DoctorImageValidation).all()
 
 
 @app.get("/disease_names/", response_model=List[str])
 async def get_disease_names(db: Session = Depends(get_db)):
-    """
-    Retrieves all distinct disease names from the database.
-    """
+    
     disease_names = db.query(DoctorImageValidation.disease_name).distinct().all()
     return [row[0] for row in disease_names]
 
@@ -535,16 +492,7 @@ async def get_doctors(db: Session = Depends(get_db)):
 
 @app.delete("/delete_table/{table_name}")
 def delete_table_route(table_name: str, db: Session = Depends(get_db)):
-    """
-    Deletes the specified table.
-
-    Args:
-        table_name: The name of the table to delete ('doctor_image_validation', 'doctors', or 'skin_disease_image').
-        db: The database session.
-
-    Returns:
-        A dictionary indicating the result of the operation.
-    """
+    
     if table_name not in ('doctor_image_validation', 'doctors', 'skin_disease_image', 'crop_image_validation', 'crop_image_quality_rating', 'crop_image_rating'):
         raise HTTPException(
             status_code=400,
@@ -680,10 +628,7 @@ async def get_unique_patients(
     validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
     db: Session = Depends(get_db)
 ):
-    """
-    Retrieves unique patient (persona) IDs from the SkinDiseaseImage table,
-    optionally filtered by validation status (doctor_name presence).
-    """
+    
     query = db.query(SkinDiseaseImage.persona_digits)
 
     if validation_status == "validated":
@@ -706,10 +651,7 @@ async def get_patient_images(
     validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
     db: Session = Depends(get_db)
 ):
-    """
-    Retrieves all image and mask paths for a given patient ID (persona_digits) from the database,
-    optionally filtered by validation status.
-    """
+    
     query = db.query(SkinDiseaseImage).filter(
         SkinDiseaseImage.persona_digits == persona_digits
     )
@@ -857,17 +799,13 @@ async def classify_skin_tone(
 
 @app.get("/check_skin_disease_images/", response_model=List[SkinDiseaseImageResponse])
 async def get_skin_disease_image_contents(db: Session = Depends(get_db)):
-    """
-    Retrieves and returns all entries from the skin_disease_image table.
-    """
+    
     contents = db.query(SkinDiseaseImage).all()
     return contents
 
 @app.get("/download_skin_disease_excel/")
 async def download_skin_disease_excel(db: Session = Depends(get_db)):
-    """
-    Downloads all skin disease image entries from the database as an Excel file.
-    """
+    
     images = db.query(SkinDiseaseImage).all()
     if not images:
         raise HTTPException(status_code=404, detail="No entries found in the skin disease table.")
@@ -1056,20 +994,13 @@ def move_and_rename_file(src_path: str, dest_dir: str) -> str:
 #             };
 
 
-import os
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
 IMAGE_DIR = "/images/categorized_images"
 
 
-import io
-import os
-import pandas as pd
-from fastapi.responses import JSONResponse
-from fastapi.responses import StreamingResponse
+
 
 
 
@@ -1318,84 +1249,67 @@ def reset_index():
     image_index["index"] = 0
     return {"message": "Index reset"}
 
-# Source directory for crop images to be categorized
-SOURCE_CROP_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorize_images_crops")
-CROP_IMAGES_DIR = SOURCE_CROP_IMAGES_DIR
-# Destination directory for categorized crop images
-CATEGORIZED_CROP_IMAGES_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
 
-# Ensure target directories exist
-os.makedirs(SOURCE_CROP_IMAGES_DIR, exist_ok=True)
-os.makedirs(CATEGORIZED_CROP_IMAGES_DIR, exist_ok=True)
 
-##### CATEGORIZED IMAGES CROPS BATCH
+##### ------------------------------------------------------CATEGORIZED IMAGES CROPS BATCH----------------------------------------------------###########
+
 import logging
 logger = logging.getLogger(__name__)
 
-@app.get("/get_crop_image_batch", response_model=List[str])
-async def get_crop_image_batch(db: Session = Depends(get_db)): # Add db dependency if querying DB
-    logger.info(f"Attempting to get crop image batch from directory: {CROP_IMAGES_DIR}")
-    try:
-        # **This is where your actual image fetching logic should be.**
-        # **Replace this placeholder with how you get your initial image list.**
+CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR = os.path.join(BASE_IMAGE_DIR, "categorize_images_crops")
+CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR = os.path.join(BASE_IMAGE_DIR, "categorized_images_crops_categorized")
+os.makedirs(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, exist_ok=True)
+os.makedirs(CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR, exist_ok=True)
 
-        # Example 1: Reading from a directory (MOST LIKELY SCENARIO FOR YOU)
-        if not os.path.exists(CROP_IMAGES_DIR):
-            logger.error(f"Image directory does NOT exist: {CROP_IMAGES_DIR}")
-            raise HTTPException(status_code=500, detail=f"Image directory not found: {CROP_IMAGES_DIR}")
+
+@app.get("/get_crop_image_batch", response_model=List[str])
+async def get_crop_image_batch(db: Session = Depends(get_db)):     
+    try:
+     
+        if not os.path.exists(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR):
+            logger.error(f"Image directory does NOT exist: {CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR}")
+            raise HTTPException(status_code=500, detail=f"Image directory not found: {CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR}")
 
         all_image_filenames = [
-            f for f in os.listdir(CROP_IMAGES_DIR)
-            if os.path.isfile(os.path.join(CROP_IMAGES_DIR, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+            f for f in os.listdir(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR)
+            if os.path.isfile(os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
         ]
         all_image_filenames.sort()
 
-        # Example 2: Querying from SkinDiseaseImage table (if your images are tracked in DB)
-        # For this to work, ensure SkinDiseaseImage model has an 'image_name' column that is the filename
-        # images_from_db = db.query(SkinDiseaseImage).filter(SkinDiseaseImage.is_categorized == False).limit(100).all() # Example filter
-        # all_image_filenames = [img.image_name for img in images_from_db if img.image_name]
+        return all_image_filenames 
 
-
-        logger.info(f"Found {len(all_image_filenames)} image files to return.")
-        logger.debug(f"Image filenames: {all_image_filenames[:5]}...")
-
-        # Directly return the list of strings
-        return all_image_filenames # <--- THIS IS THE FIX. Just return the list of strings.
-
-    except Exception as e:
+    except Exception as error_:
         logger.exception("Error in get_crop_image_batch endpoint:")
-        raise HTTPException(status_code=500, detail=f"Error retrieving image batch: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving image batch: {str(error_)}")
 
-from app.schemas import CropImageValidationResponse
+
 @app.post("/submit_batch_categorization", response_model=List[CropImageValidationResponse])
 def submit_batch_categorization(
     payloads: List[CropImageValidationRequest],
     db: Session = Depends(get_db)
 ):
-    """
-    Receives a list of categorizations, moves the images, and saves data to the DB.
-    """
-    records_to_add = [] # List to hold SQLAlchemy objects before commit
+
+    records_to_add = []
     
     for payload in payloads:
         original_filename = payload.image_filename
-        src_path = os.path.join(SOURCE_CROP_IMAGES_DIR, original_filename)
+        src_path = os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, original_filename)
 
         if not os.path.exists(src_path):
             print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
-            continue # Skip this image
+            continue # Skip
 
-        new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZED_CROP_IMAGES_DIR)
+        new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR)
 
         if not new_filename:
-            print(f"Warning: Could not move image {original_filename}. Skipping.")
+            print(f"Could not move the file {original_filename}.")
             continue
 
         image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
 
         db_record = CropImageValidation(
             image_filename = payload.image_filename,
-            image_path=image_db_path, # This is the image's path in the database
+            image_path=image_db_path,
             doctor_name=payload.doctor_name,
             comments=payload.comments,
             crop_diagnosis=payload.crop_diagnosis,
@@ -1405,12 +1319,14 @@ def submit_batch_categorization(
         records_to_add.append(db_record)
 
     try:
-        db.add_all(records_to_add) # Add all records to the session
-        db.commit() # Commit once for the whole batch
+        # Add all records to the session
+        db.add_all(records_to_add) 
+        db.commit()
         
         responses_to_return = []
         for record in records_to_add:
-            db.refresh(record) # Refresh each record to get its DB-generated ID and created_at
+            # Refresh each record to get its DB-generated ID and created_at
+            db.refresh(record) 
 
             # Explicitly create the Pydantic response object
             responses_to_return.append(
@@ -1428,10 +1344,13 @@ def submit_batch_categorization(
         
         return responses_to_return # Return the list of Pydantic response objects
 
-    except Exception as e:
+    except Exception as error_:
         db.rollback()
-        print(f"Database transaction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error during batch submission: {e}")
+        print(f"Database transaction failed: {error_}")
+        raise HTTPException(status_code=500, detail=f"Database error during batch submission: {error_}")
+
+
+#########-----------------------------------------------------------------------------------------------------------------------------------###########
 
 
 @app.get("/get_excel_data_categorized_images_crops_batch/")
@@ -1519,11 +1438,7 @@ os.makedirs(CATEGORIZED_CROP_IMAGES_DIR, exist_ok=True)
 
 
 def get_unique_filename(directory: str, original_filename: str) -> str:
-    """
-    Generates a unique filename in the given directory by appending a numerical suffix
-    if a file with the original_filename already exists.
-    e.g., 'image.jpg' -> 'image_1.jpg' -> 'image_2.jpg'
-    """
+    
     name, ext = os.path.splitext(original_filename)
     counter = 1
     new_filename = original_filename
@@ -1574,11 +1489,7 @@ async def submit_crop_validations(
     batch_data: BatchCropImageRatingRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Receives a batch of crop image rating data, stores it in the database,
-    and moves the physically rated image files to the categorized directory,
-    handling filename conflicts.
-    """
+    
     new_db_entries_count = 0
     moved_files_count = 0
     errors = []
@@ -1742,10 +1653,7 @@ async def submit_crop_quality_rating(
     rating_data: SingleCropQualityRatingRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Receives a single crop image quality rating, stores it in the database,
-    and moves the physically rated image file to the 'checked' directory.
-    """
+    
     try:
         # Query the NEW table name: models.CropImageQualityRating
         existing_entry = db.query(CropImageQualityRating).filter(

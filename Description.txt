@@ -4,3 +4,11 @@
 ### `${backendUrl}/get_all_base_names`   ---------- DONE
 ### `${backendUrl}/doctors/`
 ### `${backendUrl}/skin_disease_image/update/${encodeURIComponent(baseName)}`
+
+
+# categorized_images_crops_batch.html
+## Dependencies
+### ${backendUrl}/images/categorize_images_crops/${filename}
+### ${backendUrl}/get_crop_image_batch
+### ${backendUrl}/doctors/
+### ${backendUrl}/submit_batch_categorization

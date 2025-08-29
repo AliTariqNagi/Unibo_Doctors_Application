@@ -19,3 +19,14 @@
 ### ${backendUrl}/crop_images_for_validation/?limit=${limit}
 ### ${backendUrl}/submit_crop_validations/
 
+
+# crop_quality_rating.html
+### ${backendUrl}/doctors/
+### ${backendUrl}/get_next_crop_quality_rating_image/
+### ${backendUrl}/submit_crop_quality_rating/
+
+# classify_skin_tone.html
+### ${backendUrl}/doctors/
+### ${backendUrl}/unique_patients/?validation_status=${validationStatus}
+### ${backendUrl}/patient_images/${personaDigits}?validation_status=${validationStatus}
+### ${backendUrl}/classify_skin_tone/${selectedPatient}

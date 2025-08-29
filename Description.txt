@@ -12,3 +12,10 @@
 ### ${backendUrl}/get_crop_image_batch
 ### ${backendUrl}/doctors/
 ### ${backendUrl}/submit_batch_categorization
+
+
+# doctor_skin_disease_crops_rating.html
+### ${backendUrl}/doctors/
+### ${backendUrl}/crop_images_for_validation/?limit=${limit}
+### ${backendUrl}/submit_crop_validations/
+

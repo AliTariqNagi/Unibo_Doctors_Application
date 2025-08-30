@@ -98,6 +98,19 @@
 
         <div class="rating-controls">
             <div>
+                <label for="global-quality-rating">Crop Quality Rating (All Images):</label>
+                <select id="global-quality-rating" required>
+                    <option value="">Select rating</option>
+                    <option value="1">1 - Very poor</option>
+                    <option value="2">2 - Poor</option>
+                    <option value="3">3 - Fair</option>
+                    <option value="4">4 - Neutral</option>
+                    <option value="5">5 - Good</option>
+                    <option value="6">6 - Very good</option>
+                    <option value="7">7 - Excellent</option>
+                </select>
+            </div>
+            <div>
                 <label for="global-diagnosis-rating">Crop Diagnosis (All Images):</label>
                 <p class="question-description">Which skin disease is represented in these images?</p>
                 <select id="global-diagnosis-rating" required>
@@ -113,23 +126,7 @@
                     <option value="Chickenpox">Chickenpox</option>
                 </select>
             </div>
-            <div>
-                <label for="confidence_score">
-                    How confident are you in your evaluation expressed through the previous questions, globally?
-                </label>
-                <select id="confidence_score" name="confidence_score" required>
-                    <option value="">-- Select an Option --</option>
-                    <option value="1">1 - Not at all confident</option>
-                    <option value="2">2 - Slightly confident</option>
-                    <option value="3">3 - Somewhat unconfident</option>
-                    <option value="4">4 - Neutral / Unsure</option>
-                    <option value="5">5 - Somewhat confident</option>
-                    <option value="6">6 - Mostly confident</option>
-                    <option value="7">7 - Extremely confident</option>
-                </select>
         </div>
-
-        <!-- </div> -->
 
         <div class="global-comments">
             <label for="global-comments">Comments (All Images):</label>
@@ -150,12 +147,12 @@
         const backendUrl = "https://medicalimages.apice.unibo.it";
 
         const doctorSelect = document.getElementById("doctor-name");
+        const globalQualitySelect = document.getElementById("global-quality-rating");
         const globalDiagnosisSelect = document.getElementById("global-diagnosis-rating");
         const globalCommentsInput = document.getElementById("global-comments"); // NEW: Global comments input
         const imageGrid = document.getElementById("image-grid");
         const submitAndNextButton = document.getElementById("submit-and-next-button");
         const statusMessage = document.getElementById("status-message");
-        const confidenceScoreSelect = document.getElementById("confidence_score");
 
         const limit = 15;
 
@@ -195,6 +192,7 @@
             submitAndNextButton.disabled = true; // Disable until images load
 
             // Reset global inputs when loading new images
+            globalQualitySelect.value = "";
             globalDiagnosisSelect.value = "";
             globalCommentsInput.value = ""; // NEW: Clear global comments
 
@@ -206,7 +204,7 @@
                     return res.json();
                 })
                 .then(images => {
-                    imageGrid.innerHTML = ""; 
+                    imageGrid.innerHTML = ""; // Clear previous images
 
                     if (images.length === 0) {
                         imageGrid.textContent = "";
@@ -225,10 +223,10 @@
                         cropImg.src = `${backendUrl}${img.image_path}`;
                         cropImg.alt = "Crop Image";
 
-                        
+                        // No more individual comments or ratings here
 
                         card.appendChild(cropImg);
-                        
+                        // No comments input or rating dropdowns added per card anymore
 
                         imageGrid.appendChild(card);
                     });
@@ -260,18 +258,20 @@
                 return;
             }
 
+            const globalCropQualityRating = globalQualitySelect.value;
             const globalCropDiagnosis = globalDiagnosisSelect.value;
-            const globalComments = globalCommentsInput.value.trim();
-            const confidence_score = confidenceScoreSelect.value;
+            const globalComments = globalCommentsInput.value.trim(); // NEW: Get global comments
 
-           
-            if (!globalCropDiagnosis) {
-                statusMessage.textContent = "Please select a 'Crop Diagnosis' for ALL images.";
+            // Client-side validation for global dropdowns
+            if (!globalCropQualityRating || !globalCropDiagnosis) {
+                statusMessage.textContent = "Please select a 'Crop Quality Rating' and 'Crop Diagnosis' for ALL images.";
                 statusMessage.classList.add("error");
+                globalQualitySelect.style.border = "2px solid red";
                 globalDiagnosisSelect.style.border = "2px solid red";
                 return;
             } else {
-                globalDiagnosisSelect.style.border = ""; 
+                globalQualitySelect.style.border = ""; // Reset border
+                globalDiagnosisSelect.style.border = ""; // Reset border
             }
 
             const validations = [];
@@ -281,9 +281,9 @@
                 validations.push({
                     image_path: imagePath,
                     doctor_name: selectedDoctor,
-                    comments: globalComments || null,
+                    comments: globalComments || null, // NEW: Use global comments for all images
+                    crop_quality_rating: parseInt(globalCropQualityRating) || null,
                     crop_diagnosis: globalCropDiagnosis,
-                    confidence: parseInt(confidence_score),
                 });
             });
 

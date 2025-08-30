@@ -18,19 +18,6 @@
             margin-bottom: 20px;
             color: #333;
         }
-        .controls-panel {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            max-width: 600px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
         .image-container {
             display: flex;
             justify-content: center;
@@ -192,13 +179,6 @@
 <body>
     <h1>View/Edit Image Details</h1>
 
-    <div class="controls-panel">
-        <label for="doctor-name">Doctor's Name:</label>
-        <select id="doctor-name">
-            <option value="">-- Select a Doctor --</option>
-            </select>
-    </div>
-
     <div class="image-container">
         <div>
             <img id="current-crop-image" src="" alt="Crop Image" 
@@ -229,7 +209,8 @@
             </tr>
         </thead>
         <tbody id="data-table-body">
-            </tbody>
+            <!-- Data will be populated here -->
+        </tbody>
     </table>
 
     <div class="pagination-buttons">
@@ -253,36 +234,9 @@
         const messageContainer = document.getElementById('message-container');
         const errorContainer = document.getElementById('error-container');
         const backendUrl = 'https://medicalimages.apice.unibo.it';
-        const doctorSelect = document.getElementById('doctor-name');
 
         let allCategorizations = [];
         let currentIndex = 0;
-        let selectedDoctorName = ''; // Global variable to store the selected doctor
-
-        // Function to fetch doctors and populate the dropdown
-        async function fetchDoctors() {
-            try {
-                const response = await fetch(`${backendUrl}/doctors/`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch doctors.');
-                }
-                const doctors = await response.json();
-                doctors.forEach(doctor => {
-                    const option = document.createElement('option');
-                    option.value = doctor.doctor_name;
-                    option.textContent = doctor.doctor_name;
-                    doctorSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error fetching doctors:', error);
-                errorContainer.textContent = 'Failed to load doctors list.';
-            }
-        }
-        
-        // Event listener for doctor selection
-        doctorSelect.addEventListener('change', (event) => {
-            selectedDoctorName = event.target.value;
-        });
 
         function updatePagination() {
             const hasPrev = currentIndex > 0;
@@ -343,20 +297,18 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${entry.id || ''}</td>
-                    <td>
-                        <input type="text" value="${entry.doctor_name || ''}" class="editable" data-field="doctor_name" data-id="${entry.id}" readonly>
-                    </td>
+                    <td><input type="text" value="${entry.doctor_name || ''}" class="editable" data-field="doctor_name" data-id="${entry.id}"></td>
                     <td><textarea class="editable" data-field="comments" data-id="${entry.id}">${entry.comments || ''}</textarea></td>
                     <td><textarea class="editable" data-field="mask_comments" data-id="${entry.id}">${entry.mask_comments || ''}</textarea></td>
                     <td>
                         <div class="radio-group-inline" data-field="mask_rating" data-id="${entry.id}">
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="1" ${entry.mask_rating === 1 ? 'checked' : ''}>1- Very Inaccurate</label>
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="2" ${entry.mask_rating === 2 ? 'checked' : ''}>2 - Inaccurate</label>
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="3" ${entry.mask_rating === 3 ? 'checked' : ''}>3 - Somewhat Inaccurate</label>
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="4" ${entry.mask_rating === 4 ? 'checked' : ''}>4 - Neutral</label>
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="5" ${entry.mask_rating === 5 ? 'checked' : ''}>5 - Somewhat Accurate</label>
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="6" ${entry.mask_rating === 6 ? 'checked' : ''}>6 - Accurate</label>
-                            <label><input type="radio" name="mask_rating_${entry.id}" value="7" ${entry.mask_rating === 7 ? 'checked' : ''}>7 - Very Accurate</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="1" ${entry.mask_rating === 1 ? 'checked' : ''}>1- Very Inaccurate – The mask does not correspond to the affected area at all</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="2" ${entry.mask_rating === 2 ? 'checked' : ''}>2 - Inaccurate – The mask includes large errors (e.g., misses key lesions or marks healthy skin)</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="3" ${entry.mask_rating === 3 ? 'checked' : ''}>3 - Somewhat Inaccurate – Several noticeable inaccuracies; substantial corrections needed</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="4" ${entry.mask_rating === 4 ? 'checked' : ''}>4 - Neutral – Mask is acceptable but contains minor inaccuracies</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="5" ${entry.mask_rating === 5 ? 'checked' : ''}>5 - Somewhat Accurate – Mostly correct, with a few small issues</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="6" ${entry.mask_rating === 6 ? 'checked' : ''}>6 - Accurate – Correctly outlines nearly all affected areas</label>
+                            <label><input type="radio" name="mask_rating_${entry.id}" value="7" ${entry.mask_rating === 7 ? 'checked' : ''}>7 - Very Accurate – Precisely delineates all visible diseased areas</label>
                         </div>
                     </td>
                     <td>
@@ -411,12 +363,6 @@
                 const saveNewEntryButtons = dataTableBody.querySelectorAll('.save-new-entry-button');
                 saveNewEntryButtons.forEach(button => {
                     button.addEventListener('click', () => {
-                        if (!selectedDoctorName) {
-                            errorContainer.textContent = 'Please select a doctor from the dropdown before saving.';
-                            messageContainer.textContent = '';
-                            return;
-                        }
-
                         const originalId = button.dataset.id;
                         const updatedFields = {};
                         const row = button.closest('tr');
@@ -432,7 +378,9 @@
                             updatedFields[input.dataset.field] = value;
                         });
 
-                        // Special handling for real_generated (it's a select now)
+                        // Special handling for real_generated (it's a select now, not radio buttons in this file)
+                        // This part was previously for radio buttons, but in this file, it's a select again.
+                        // So, we just get the value directly from the select element.
                         const realGeneratedSelect = row.querySelector(`select.editable[data-field="real_generated"][data-id="${originalId}"]`);
                         if (realGeneratedSelect) {
                             updatedFields['real_generated'] = realGeneratedSelect.value;
@@ -469,9 +417,7 @@
                             updatedFields['crop_mask_path'] = originalEntry.crop_mask_path;
                             updatedFields['disease_name'] = updatedFields['image_precision'];
                         }
-                        
-                        // ADD THE SELECTED DOCTOR NAME TO THE PAYLOAD
-                        updatedFields['doctor_name'] = selectedDoctorName;
+
 
                         fetch(`${backendUrl}/create_new_categorization/`, {
                             method: 'POST',
@@ -539,11 +485,8 @@
             }
         });
 
-        // Initial fetch on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchDoctors();
-            fetchAllCategorizations();
-        });
+        // Fetch all categorizations on page load
+        fetchAllCategorizations();
     </script>
 </body>
 </html>

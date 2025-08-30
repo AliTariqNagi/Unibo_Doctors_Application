@@ -1,350 +1,382 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Skin Disease Image Categorization (Batch View)</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f5f8fa;
-      margin: 0; padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-    #categorization-container {
-      background: #fff;
-      max-width: 1000px;
-      width: 95%;
-      margin: 40px 0;
-      padding: 25px 30px;
-      border-radius: 12px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-      color: #2c3e50;
-      font-weight: 700;
-    }
-    .global-controls { /* Container for all global inputs */
-        margin-bottom: 25px;
-        padding: 15px;
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skin Disease Image Categorization (Batch View)</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #f5f8fa;
+        margin: 0; padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+      }
+      #categorization-container {
+        background: #fff;
+        max-width: 1000px;
+        width: 95%;
+        margin: 40px 0;
+        padding: 25px 30px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #2c3e50;
+        font-weight: 700;
+      }
+      .global-controls { /* Container for all global inputs */
+          margin-bottom: 25px;
+          padding: 15px;
+          border: 1px solid #e0e0e0;
+          border-radius: 10px;
+          background: #f9f9f9;
+      }
+      .global-controls div { /* Spacing for each global input section */
+          margin-bottom: 15px;
+      }
+      .global-controls div:last-child {
+          margin-bottom: 0; /* No margin after the last one */
+      }
+      .global-controls label {
+          display: block;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #34495e;
+          font-size: 0.95rem;
+      }
+      .global-controls select, .global-controls textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 5px;
+          border: 1.5px solid #ccc;
+          font-size: 0.9rem;
+          font-family: inherit;
+          transition: border-color 0.3s ease;
+          box-sizing: border-box;
+          /* margin-bottom: 15px; Removed from here, moved to parent div */
+      }
+      .global-controls select:focus, .global-controls textarea:focus {
+          outline: none;
+          border-color: #2980b9;
+          box-shadow: 0 0 5px #2980b9aa;
+      }
+      .global-controls textarea {
+          resize: vertical;
+          min-height: 80px; /* Make global comments textarea larger */
+      }
+
+      .images-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+      }
+      .image-item { /* Only contains image and filename now */
         border: 1px solid #e0e0e0;
         border-radius: 10px;
-        background: #f9f9f9;
-    }
-    .global-controls div { /* Spacing for each global input section */
-        margin-bottom: 15px;
-    }
-    .global-controls div:last-child {
-        margin-bottom: 0; /* No margin after the last one */
-    }
-    .global-controls label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #34495e;
-        font-size: 0.95rem;
-    }
-    .global-controls select, .global-controls textarea {
-        width: 100%;
-        padding: 10px 12px;
-        border-radius: 5px;
-        border: 1.5px solid #ccc;
-        font-size: 0.9rem;
-        font-family: inherit;
-        transition: border-color 0.3s ease;
-        box-sizing: border-box;
-        /* margin-bottom: 15px; Removed from here, moved to parent div */
-    }
-    .global-controls select:focus, .global-controls textarea:focus {
-        outline: none;
-        border-color: #2980b9;
-        box-shadow: 0 0 5px #2980b9aa;
-    }
-    .global-controls textarea {
-        resize: vertical;
-        min-height: 80px; /* Make global comments textarea larger */
-    }
-
-    .images-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 25px;
-      margin-bottom: 30px;
-    }
-    .image-item { /* Only contains image and filename now */
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      padding: 15px;
-      background: #fafafa;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .image-item img {
-      max-width: 100%;
-      height: 180px;
-      object-fit: contain;
-      border-radius: 6px;
-      border: 1px solid #ddd;
-      margin-bottom: 10px;
-    }
-    .image-item .image-filename {
-      font-weight: 600;
-      color: #34495e;
-      font-size: 0.9rem;
-      margin-bottom: 5px; /* Reduced margin as no fields below */
-      text-align: center;
-      word-break: break-all;
-    }
-
-    .fitzpatrick-image-container {
-      text-align: center;
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px dashed #ccc;
-      border-radius: 8px;
-    }
-    .fitzpatrick-image-container img {
-      width: 400px;
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px #aaa7;
-    }
-    .navigation-buttons, .submit-section {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 30px;
-    }
-    button {
-      cursor: pointer;
-      background-color: #2980b9;
-      color: white;
-      border: none;
-      padding: 14px 26px;
-      font-size: 1.1rem;
-      border-radius: 10px;
-      transition: background-color 0.3s ease;
-      font-weight: 700;
-    }
-    button:hover {
-      background-color: #1c5980;
-    }
-    #submit_all_button {
-      background-color: #27ae60;
-    }
-    #submit_all_button:hover {
-      background-color: #1f8b4d;
-    }
-    #message-container {
-      margin-top: 20px;
-      font-weight: 700;
-      font-size: 1rem;
-      color: #27ae60;
-      text-align: center;
-      min-height: 24px;
-    }
-
-    /* Smaller devices adjustments */
-    @media (max-width: 768px) {
-      .images-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        padding: 15px;
+        background: #fafafa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
       .image-item img {
-        height: 150px;
+        max-width: 100%;
+        height: 180px;
+        object-fit: contain;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
       }
-      button {
-        padding: 12px 20px;
-        font-size: 1rem;
+      .image-item .image-filename {
+        font-weight: 600;
+        color: #34495e;
+        font-size: 0.9rem;
+        margin-bottom: 5px; /* Reduced margin as no fields below */
+        text-align: center;
+        word-break: break-all;
+      }
+
+      .fitzpatrick-image-container {
+        text-align: center;
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px dashed #ccc;
+        border-radius: 8px;
+      }
+      .fitzpatrick-image-container img {
+        width: 400px;
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px #aaa7;
       }
       .navigation-buttons, .submit-section {
-        flex-direction: column;
-        gap: 10px;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 30px;
       }
-    }
-  </style>
-</head>
-<body>
-  <div id="categorization-container">
-    <h1>Skin Disease Image Categorization (Batch View)</h1>
+      button {
+        cursor: pointer;
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 14px 26px;
+        font-size: 1.1rem;
+        border-radius: 10px;
+        transition: background-color 0.3s ease;
+        font-weight: 700;
+      }
+      button:hover {
+        background-color: #1c5980;
+      }
+      #submit_all_button {
+        background-color: #27ae60;
+      }
+      #submit_all_button:hover {
+        background-color: #1f8b4d;
+      }
+      #message-container {
+        margin-top: 20px;
+        font-weight: 700;
+        font-size: 1rem;
+        color: #27ae60;
+        text-align: center;
+        min-height: 24px;
+      }
 
-    <form id="categorizationForm">
-      <div class="global-controls">
-          <div>
-              <label for="doctor_name_global">Doctor's Name:</label>
-              <select id="doctor_name_global" name="doctor_name_global" required>
-                <option value="">-- Select Doctor --</option>
+      /* Smaller devices adjustments */
+      @media (max-width: 768px) {
+        .images-grid {
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        }
+        .image-item img {
+          height: 150px;
+        }
+        button {
+          padding: 12px 20px;
+          font-size: 1rem;
+        }
+        .navigation-buttons, .submit-section {
+          flex-direction: column;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="categorization-container">
+      <h1>Skin Disease Image Categorization (Batch View)</h1>
+
+      <form id="categorizationForm">
+        <div class="global-controls">
+            <div>
+                <label for="doctor_name_global">Doctor's Name:</label>
+                <select id="doctor_name_global" name="doctor_name_global" required>
+                  <option value="">-- Select Doctor --</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="crop_diagnosis_global">Crop Diagnosed Disease (Applies to all images in the batch):</label>
+                <p class="question-description">Which skin disease do these crops represent?</p>
+                <select id="crop_diagnosis_global" name="crop_diagnosis_global" required>
+                    <option value="">-- Select Crop Diagnosis --</option>
+                    <option value="maculopapular_exanthema">Maculopapular exanthema</option>
+                    <option value="viral_exanthema">Viral exanthema</option>
+                    <option value="scabies">Scabies</option>
+                </select>
+            </div>
+
+            <!-- <div>
+                <label>Fitzpatrick Skin Tone Classification (Applies to all images in the batch):</label>
+                <div class="global-fitzpatrick-scale">
+                    <span>Type I</span>
+                    <input type="radio" id="fitzpatrick_I_global" name="fitzpatrick_scale_global" value="I" required />
+                    <span>Type II</span>
+                    <input type="radio" id="fitzpatrick_II_global" name="fitzpatrick_scale_global" value="II" />
+                    <span>Type III</span>
+                    <input type="radio" id="fitzpatrick_III_global" name="fitzpatrick_scale_global" value="III" />
+                    <span>Type IV</span>
+                    <input type="radio" id="fitzpatrick_IV_global" name="fitzpatrick_scale_global" value="IV" />
+                    <span>Type V</span>
+                    <input type="radio" id="fitzpatrick_V_global" name="fitzpatrick_scale_global" value="V" />
+                    <span>Type VI</span>
+                    <input type="radio" id="fitzpatrick_VI_global" name="fitzpatrick_scale_global" value="VI" />
+                </div>
+            </div> -->
+
+            <div>
+                <label for="comments_global">Comments (Applies to all images in the batch):</label>
+                <textarea id="comments_global" name="comments_global"></textarea>
+            </div>
+
+            <div>
+              <label for="fitzpatrick_scale">
+                To what extent do these images resemble the skin of a patient with Fitzpatrick skin type {insert Fitzpatrick skin type of the image}?
+              </label>
+              <select id="fitzpatrick_scale" name="fitzpatrick_scale" required>
+                <option value="">-- Select an Option --</option>
+                <option value="1">1 - Not at all</option>
+                <option value="2">2 - Slightly</option>
+                <option value="3">3 - Somewhat unrepresentative</option>
+                <option value="4">4 - Neutral / Unsure</option>
+                <option value="5">5 - Somewhat representative</option>
+                <option value="6">6 - Mostly representative</option>
+                <option value="7">7 - Completely representative</option>
               </select>
-          </div>
-
-          <div>
-              <label for="crop_diagnosis_global">Crop Diagnosed Disease (Applies to all images in the batch):</label>
-              <p class="question-description">Which skin disease do these crops represent?</p>
-              <select id="crop_diagnosis_global" name="crop_diagnosis_global" required>
-                  <option value="">-- Select Crop Diagnosis --</option>
-                  <option value="maculopapular_exanthema">Maculopapular exanthema</option>
-                  <option value="viral_exanthema">Viral exanthema</option>
-                  <option value="scabies">Scabies</option>
-              </select>
-          </div>
-
-          <!-- <div>
-              <label>Fitzpatrick Skin Tone Classification (Applies to all images in the batch):</label>
-              <div class="global-fitzpatrick-scale">
-                  <span>Type I</span>
-                  <input type="radio" id="fitzpatrick_I_global" name="fitzpatrick_scale_global" value="I" required />
-                  <span>Type II</span>
-                  <input type="radio" id="fitzpatrick_II_global" name="fitzpatrick_scale_global" value="II" />
-                  <span>Type III</span>
-                  <input type="radio" id="fitzpatrick_III_global" name="fitzpatrick_scale_global" value="III" />
-                  <span>Type IV</span>
-                  <input type="radio" id="fitzpatrick_IV_global" name="fitzpatrick_scale_global" value="IV" />
-                  <span>Type V</span>
-                  <input type="radio" id="fitzpatrick_V_global" name="fitzpatrick_scale_global" value="V" />
-                  <span>Type VI</span>
-                  <input type="radio" id="fitzpatrick_VI_global" name="fitzpatrick_scale_global" value="VI" />
-              </div>
-          </div> -->
-
-          <div>
-              <label for="comments_global">Comments (Applies to all images in the batch):</label>
-              <textarea id="comments_global" name="comments_global"></textarea>
-          </div>
-      </div>
-
-      <div id="images-display-area" class="images-grid">
+            </div>
+            <div>
+          <label for="confidence_score">
+            How confident are you in your evaluation expressed through the previous questions, globally?
+          </label>
+          <select id="confidence_score" name="confidence_score" required>
+            <option value="">-- Select an Option --</option>
+            <option value="1">1 - Not at all confident</option>
+            <option value="2">2 - Slightly confident</option>
+            <option value="3">3 - Somewhat unconfident</option>
+            <option value="4">4 - Neutral / Unsure</option>
+            <option value="5">5 - Somewhat confident</option>
+            <option value="6">6 - Mostly confident</option>
+            <option value="7">7 - Extremely confident</option>
+          </select>
         </div>
+        </div>
+        
 
-      <div class="navigation-buttons">
-        <button type="button" id="prev_batch_button">Previous 15 Images</button>
-        <button type="button" id="next_batch_button">Next 15 Images</button>
-      </div>
-      <div class="submit-section">
-        <button type="button" id="submit_all_button">Submit All Categorizations</button>
-      </div>
-    </form>
-    
-    <!-- <div class="fitzpatrick-image-container">
-      <p style="font-weight: 600; color: #34495e; margin-bottom: 10px;">Fitzpatrick Skin Tone Reference:</p>
-      <img src="/images/fitzpatrick.jpg" alt="Fitzpatrick Scale" />
-    </div> -->
+        <div id="images-display-area" class="images-grid">
+          </div>
 
-    <div id="message-container"></div>
-  </div>
+        <div class="navigation-buttons">
+          <button type="button" id="prev_batch_button">Previous 15 Images</button>
+          <button type="button" id="next_batch_button">Next 15 Images</button>
+        </div>
+        <div class="submit-section">
+          <button type="button" id="submit_all_button">Submit All Categorizations</button>
+        </div>
+      </form>
+      
+      <!-- <div class="fitzpatrick-image-container">
+        <p style="font-weight: 600; color: #34495e; margin-bottom: 10px;">Fitzpatrick Skin Tone Reference:</p>
+        <img src="/images/fitzpatrick.jpg" alt="Fitzpatrick Scale" />
+      </div> -->
 
-  <script>
-    const backendUrl = 'https://medicalimages.apice.unibo.it'; // IMPORTANT: Match your backend's public URL
-    const BATCH_SIZE = 15; // Number of images to display at once
+      <div id="message-container"></div>
+    </div>
+
+    <script>
+    const backendUrl = 'https://medicalimages.apice.unibo.it';
+    const BATCH_SIZE = 15;
 
     const doctorNameGlobalSelect = document.getElementById('doctor_name_global');
     const cropDiagnosisGlobalSelect = document.getElementById('crop_diagnosis_global');
-    //const fitzpatrickRadiosGlobal = document.querySelectorAll('input[name="fitzpatrick_scale_global"]');
-    const commentsGlobalTextarea = document.getElementById('comments_global'); // New global comments textarea
-
+    const commentsGlobalTextarea = document.getElementById('comments_global');
     const imagesDisplayArea = document.getElementById('images-display-area');
-    const categorizationForm = document.getElementById('categorizationForm');
-
     const prevBatchButton = document.getElementById('prev_batch_button');
     const nextBatchButton = document.getElementById('next_batch_button');
     const submitAllButton = document.getElementById('submit_all_button');
     const messageContainer = document.getElementById('message-container');
+    const fitzpatrickScaleScoreSelect = document.getElementById("fitzpatrick_scale");
+    const confidenceScoreSelect = document.getElementById("confidence_score");
 
-    let allImageFilenames = []; // Stores ALL filenames fetched from the backend
-    let currentBatchStartIndex = 0; // Index in `allImageFilenames` for the start of the current batch
+    let allImageFilenames = [];
+    let currentBatchStartIndex = 0;
     let doctorsList = [];
-    // Stores categorization data for ALL images, keyed by filename
-    // Example: { "image1.jpg": { doctor_name: "Dr. A", comments: "...", crop_diagnosis: "...", fitzpatrick_scale: "..." }, "image2.jpg": { ... } }
     let allCategorizationsData = {};
 
     function buildImageUrl(filename) {
-      return `${backendUrl}/images/categorize_images_crops/${filename}`;
+        return `${backendUrl}/images/categorize_images_crops/${filename}`;
     }
 
     async function loadBatchOfAllImages() {
-      try {
-        const response = await fetch(`${backendUrl}/get_crop_image_batch`);
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to load image batch: ${response.status} - ${errorText}`);
-        }
-        allImageFilenames = await response.json();
-        allImageFilenames.sort(); // Ensure consistent order
-
-        // Initialize categorizationsData for each image if not already present
-        allImageFilenames.forEach(filename => {
-            if (!allCategorizationsData[filename]) {
+        try {
+            messageContainer.textContent = 'Loading images...';
+            const response = await fetch(`${backendUrl}/get_crop_image_batch`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to load image batch: ${response.status} - ${errorText}`);
+            }
+            allImageFilenames = await response.json();
+            allImageFilenames.sort();
+            
+            // Initialize categorization data for all images
+            allCategorizationsData = {};
+            allImageFilenames.forEach(filename => {
                 allCategorizationsData[filename] = {
                     doctor_name: '',
                     comments: '',
                     crop_diagnosis: '',
-                    //fitzpatrick_scale: ''
+                    fitzpatrick_scale_score: '',
+                    confidence_score: '',
                 };
-            }
-        });
-        console.log("All image filenames loaded:", allImageFilenames.length);
-      } catch (error) {
-        console.error('Error loading ALL image filenames:', error);
-        messageContainer.textContent = `Failed to load images: ${error.message}. Please refresh.`;
-      }
+            });
+            console.log("All image filenames loaded:", allImageFilenames.length);
+        } catch (error) {
+            console.error('Error loading ALL image filenames:', error);
+            messageContainer.textContent = `Failed to load images: ${error.message}. Please refresh.`;
+        }
     }
 
     async function loadDoctors() {
-      try {
-        const res = await fetch(`${backendUrl}/doctors/`);
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`Failed to fetch doctors: ${res.status} - ${errorText}`);
+        try {
+            const res = await fetch(`${backendUrl}/doctors/`);
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Failed to fetch doctors: ${res.status} - ${errorText}`);
+            }
+            doctorsList = await res.json();
+            doctorNameGlobalSelect.innerHTML = '<option value="">-- Select Doctor --</option>';
+            doctorsList.forEach(doc => {
+                const option = document.createElement('option');
+                option.value = doc.doctor_name;
+                option.textContent = doc.doctor_name;
+                doctorNameGlobalSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Failed to load doctors:', error);
+            messageContainer.textContent = `Failed to load doctors: ${error.message}.`;
         }
-        doctorsList = await res.json();
-
-        doctorNameGlobalSelect.innerHTML = '<option value="">-- Select Doctor --</option>';
-        doctorsList.forEach(doc => {
-          const option = document.createElement('option');
-          option.value = doc.doctor_name;
-          option.textContent = doc.doctor_name;
-          doctorNameGlobalSelect.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Failed to load doctors:', error);
-        messageContainer.textContent = `Failed to load doctors: ${error.message}.`;
-      }
     }
-
-    // Call this before displaying a new batch or submitting
-    function saveCurrentBatchCategorization() {
+    
+    function applyGlobalValuesToBatch() {
         const currentBatchFilenames = allImageFilenames.slice(
             currentBatchStartIndex,
             currentBatchStartIndex + BATCH_SIZE
         );
-
         const globalDoctorName = doctorNameGlobalSelect.value;
         const globalCropDiagnosis = cropDiagnosisGlobalSelect.value;
-        //const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
-        const globalComments = commentsGlobalTextarea.value; // Get global comments
-
+        const globalComments = commentsGlobalTextarea.value;
+        const globalFitzpatrickScore = fitzpatrickScaleScoreSelect.value;
+        const globalConfidenceScore = confidenceScoreSelect.value;
+        
         currentBatchFilenames.forEach(filename => {
             if (allCategorizationsData[filename]) {
                 allCategorizationsData[filename].doctor_name = globalDoctorName;
-                allCategorizationsData[filename].comments = globalComments; // Apply global comments
                 allCategorizationsData[filename].crop_diagnosis = globalCropDiagnosis;
-                //allCategorizationsData[filename].fitzpatrick_scale = globalFitzpatrickScale;
+                allCategorizationsData[filename].comments = globalComments;
+                allCategorizationsData[filename].fitzpatrick_scale_score = globalFitzpatrickScore;
+                allCategorizationsData[filename].confidence_score = globalConfidenceScore;
             }
         });
+        console.log("Global values applied to current batch.");
     }
-
+    
+    doctorNameGlobalSelect.addEventListener('change', applyGlobalValuesToBatch);
+    cropDiagnosisGlobalSelect.addEventListener('change', applyGlobalValuesToBatch);
+    commentsGlobalTextarea.addEventListener('input', applyGlobalValuesToBatch);
+    fitzpatrickScaleScoreSelect.addEventListener('change', applyGlobalValuesToBatch);
+    confidenceScoreSelect.addEventListener('change', applyGlobalValuesToBatch);
+    
     function displayCurrentBatch() {
-        saveCurrentBatchCategorization(); // Save data from the previous batch if any
-
-        imagesDisplayArea.innerHTML = ''; // Clear existing images
-        messageContainer.textContent = ''; // Clear messages
-
+        imagesDisplayArea.innerHTML = '';
+        messageContainer.textContent = '';
         const batchFilenames = allImageFilenames.slice(
             currentBatchStartIndex,
             currentBatchStartIndex + BATCH_SIZE
@@ -356,29 +388,30 @@
             return;
         }
 
-        // Populate global controls based on the first image in the batch (if data exists)
-        const firstImageFilename = batchFilenames[0];
-        const firstImageData = allCategorizationsData[firstImageFilename] || {}; // Get data or empty object
-
-        doctorNameGlobalSelect.value = firstImageData.doctor_name || '';
-        cropDiagnosisGlobalSelect.value = firstImageData.crop_diagnosis || '';
-        commentsGlobalTextarea.value = firstImageData.comments || ''; // Populate global comments
-
-        // fitzpatrickRadiosGlobal.forEach(radio => {
-        //     radio.checked = (radio.value === firstImageData.fitzpatrick_scale);
-        // });
-
         batchFilenames.forEach(filename => {
             const imageItemDiv = document.createElement('div');
             imageItemDiv.className = 'image-item';
-
-            imageItemDiv.innerHTML = `
-                <img src="${buildImageUrl(filename)}" alt="Crop Image: ${filename}" />
-                <p class="image-filename">${filename}</p>
-                `;
+            imageItemDiv.innerHTML = `<img src="${buildImageUrl(filename)}" alt="Crop Image: ${filename}" /><p class="image-filename">${filename}</p>`;
             imagesDisplayArea.appendChild(imageItemDiv);
         });
 
+        if (batchFilenames.length > 0) {
+            const firstImageFilename = batchFilenames[0];
+            const firstImageData = allCategorizationsData[firstImageFilename] || {};
+            doctorNameGlobalSelect.value = firstImageData.doctor_name || '';
+            cropDiagnosisGlobalSelect.value = firstImageData.crop_diagnosis || '';
+            commentsGlobalTextarea.value = firstImageData.comments || '';
+            fitzpatrickScaleScoreSelect.value = firstImageData.fitzpatrick_scale_score || '';
+            confidenceScoreSelect.value = firstImageData.confidence_score || '';
+        } else {
+            doctorNameGlobalSelect.value = '';
+            cropDiagnosisGlobalSelect.value = '';
+            commentsGlobalTextarea.value = '';
+            fitzpatrickScaleScoreSelect.value = '';
+            confidenceScoreSelect.value = '';
+        }
+        
+        applyGlobalValuesToBatch();
         updateNavigationButtons();
     }
 
@@ -388,137 +421,115 @@
         submitAllButton.disabled = allImageFilenames.length === 0;
     }
 
-    // Initial load when the page is ready
     window.onload = async () => {
-      await Promise.all([loadBatchOfAllImages(), loadDoctors()]);
-      
-      if (allImageFilenames.length > 0) {
-        displayCurrentBatch(); // Display the first batch
-      } else {
-        messageContainer.textContent = 'No more data available.';
-        submitAllButton.disabled = true;
-      }
+        await Promise.all([loadBatchOfAllImages(), loadDoctors()]);
+        if (allImageFilenames.length > 0) {
+            displayCurrentBatch();
+        } else {
+            messageContainer.textContent = 'No more data available.';
+            submitAllButton.disabled = true;
+        }
     };
 
-    // Event Listeners for navigation buttons
     prevBatchButton.onclick = () => {
-      if (currentBatchStartIndex > 0) {
-        currentBatchStartIndex = Math.max(0, currentBatchStartIndex - BATCH_SIZE);
-        displayCurrentBatch();
-      }
+        if (currentBatchStartIndex > 0) {
+            currentBatchStartIndex = Math.max(0, currentBatchStartIndex - BATCH_SIZE);
+            displayCurrentBatch();
+        }
     };
 
     nextBatchButton.onclick = () => {
-      if (currentBatchStartIndex + BATCH_SIZE < allImageFilenames.length) {
-        currentBatchStartIndex += BATCH_SIZE;
-        displayCurrentBatch();
-      } else {
-        messageContainer.textContent = 'You are at the last batch of images.';
-      }
-    };
-
-    // Event Listener for the "Submit All" button
-    submitAllButton.onclick = async () => {
-      saveCurrentBatchCategorization(); // Save data from the currently viewed batch
-
-      const doctorName = doctorNameGlobalSelect.value;
-      const globalCropDiagnosis = cropDiagnosisGlobalSelect.value;
-      //const globalFitzpatrickScale = Array.from(fitzpatrickRadiosGlobal).find(radio => radio.checked)?.value || '';
-      // No need to get global comments here as it's already applied by saveCurrentBatchCategorization
-
-      // Perform validation for all global required fields
-      if (!doctorName) {
-          messageContainer.textContent = "Please select a Doctor's Name before submitting all categorizations.";
-          return;
-      }
-      if (!globalCropDiagnosis) {
-          messageContainer.textContent = "Please select a Crop Diagnosed Disease before submitting all categorizations.";
-          return;
-      }
-      // if (!globalFitzpatrickScale) {
-      //     messageContainer.textContent = "Please select a Fitzpatrick Skin Tone Classification before submitting all categorizations.";
-      //     return;
-      // }
-      // If comments are mandatory, add validation here:
-      // if (!commentsGlobalTextarea.value.trim()) {
-      //     messageContainer.textContent = "Please add comments before submitting all categorizations.";
-      //     return;
-      // }
-
-
-      const allPayloads = [];
-      let validationError = false;
-
-      // Iterate through all collected categorizations (across all batches)
-      for (const filename of allImageFilenames) {
-          const data = allCategorizationsData[filename];
-          
-          // These global values should already be applied to `data` via saveCurrentBatchCategorization.
-          // This loop primarily formats data for the backend and performs a final check.
-          
-          if (!data.doctor_name || !data.crop_diagnosis ) {
-              messageContainer.textContent = `Missing required data for : ${filename}. Please ensure all fields are selected.`;
-              validationError = true;
-              break; 
-          }
-          allPayloads.push({
-              image_filename: filename,
-              doctor_name: data.doctor_name,
-              comments: data.comments,
-              crop_diagnosis: data.crop_diagnosis,
-              //fitzpatrick_scale: data.fitzpatrick_scale
-          });
-      }
-
-      if (validationError) {
-          return;
-      }
-
-      if (allPayloads.length === 0) {
-          messageContainer.textContent = 'No categorizations to submit.';
-          return;
-      }
-
-      // Disable buttons to prevent double submission
-      submitAllButton.disabled = true;
-      prevBatchButton.disabled = true;
-      nextBatchButton.disabled = true;
-      messageContainer.textContent = 'Submitting all categorizations... Please wait.';
-
-      try {
-        const response = await fetch(`${backendUrl}/submit_batch_categorization`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(allPayloads),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, ${errorText}`);
-        }
-
-        const data = await response.json();
-        messageContainer.textContent = 'All categorizations saved successfully! Loading next batch...';
-        
-        // Clear current data and load a new batch of ALL images
-        allCategorizationsData = {}; // Reset all stored categorizations
-        currentBatchStartIndex = 0; // Reset to the beginning of the new set
-        await loadBatchOfAllImages(); // Fetch new batch of all images
-        await loadDoctors(); // Re-fetch doctors just in case (optional, but safe)
-
-        if (allImageFilenames.length > 0) {
-          displayCurrentBatch(); // Display the first batch of the new set
+        if (currentBatchStartIndex + BATCH_SIZE < allImageFilenames.length) {
+            currentBatchStartIndex += BATCH_SIZE;
+            displayCurrentBatch();
         } else {
-          imagesDisplayArea.innerHTML = '<p style="text-align: center; color: #555;">No new images found for categorization.</p>';
-          submitAllButton.disabled = true;
+            messageContainer.textContent = 'You are at the last batch of images.';
         }
-      } catch (err) {
-        console.error('Error saving entries:', err);
-        messageContainer.textContent = `Failed to save categorizations: ${err.message}`;
-      } finally {
-        updateNavigationButtons(); // Re-enable or disable based on new state
-      }
     };
-  </script>
-</body>
-</html>
+
+    // New logic for submitting and advancing to the next batch without reloading
+    submitAllButton.onclick = async () => {
+        applyGlobalValuesToBatch(); 
+        
+        const currentBatchFilenames = allImageFilenames.slice(
+            currentBatchStartIndex,
+            currentBatchStartIndex + BATCH_SIZE
+        );
+        const currentBatchPayloads = [];
+        let validationError = false;
+        let missingFilename = null;
+
+        for (const filename of currentBatchFilenames) {
+            const data = allCategorizationsData[filename];
+            
+            if (!data.doctor_name || !data.crop_diagnosis || !data.fitzpatrick_scale_score || !data.confidence_score) {
+                validationError = true;
+                missingFilename = filename;
+                break;
+            }
+
+            currentBatchPayloads.push({
+                image_filename: filename,
+                doctor_name: data.doctor_name,
+                comments: data.comments,
+                crop_diagnosis: data.crop_diagnosis,
+                fitzpatrick_scale: parseInt(data.fitzpatrick_scale_score),
+                confidence: parseInt(data.confidence_score)
+            });
+        }
+
+        if (validationError) {
+            messageContainer.textContent = `Missing required data for: ${missingFilename}. Please fill out all global fields for this batch before submitting.`;
+            document.getElementById('categorization-container').scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        if (currentBatchPayloads.length === 0) {
+            messageContainer.textContent = 'No categorizations to submit for this batch.';
+            return;
+        }
+
+        submitAllButton.disabled = true;
+        prevBatchButton.disabled = true;
+        nextBatchButton.disabled = true;
+        messageContainer.textContent = 'Submitting current batch... Please wait.';
+
+        try {
+            const response = await fetch(`${backendUrl}/submit_batch_categorization`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentBatchPayloads),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, ${errorText}`);
+            }
+
+            const data = await response.json();
+            messageContainer.textContent = 'Current batch saved successfully!';
+            
+            // SUCCESS: Remove submitted images from our local list
+            allImageFilenames.splice(currentBatchStartIndex, currentBatchFilenames.length);
+            
+            // Then, display the next batch from the remaining images
+            if (allImageFilenames.length > 0) {
+                displayCurrentBatch();
+            } else {
+                // If no images are left, show a message
+                imagesDisplayArea.innerHTML = '<p style="text-align: center; color: #555;">All images have been categorized.</p>';
+                submitAllButton.disabled = true;
+                prevBatchButton.disabled = true;
+                nextBatchButton.disabled = true;
+            }
+
+        } catch (err) {
+            console.error('Error saving batch:', err);
+            messageContainer.textContent = `Failed to save batch: ${err.message}`;
+        } finally {
+            updateNavigationButtons();
+        }
+    };
+</script>
+  </body>
+  </html>

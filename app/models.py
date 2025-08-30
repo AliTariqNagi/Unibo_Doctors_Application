@@ -140,6 +140,7 @@ class CropImageValidation(Base):
     comments = Column(String)
     crop_diagnosis = Column(String)
     fitzpatrick_scale = Column(String)
+    confidence = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -148,11 +149,12 @@ class CropImageRating(Base):
     __tablename__ = "crop_image_rating" 
 
     id = Column(Integer, primary_key=True, index=True)
-    image_path = Column(String, unique=True, index=True)
+    image_path = Column(String)
     doctor_name = Column(String)
     comments = Column(String)
     crop_quality_rating = Column(Integer)
     crop_diagnosis = Column(String)
+    confidence = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -160,7 +162,7 @@ class CropImageQualityRating(Base):
     __tablename__ = "crop_image_quality_rating"
 
     id = Column(Integer, primary_key=True, index=True)
-    image_path = Column(String, unique=True, index=True)
+    image_path = Column(String)
     doctor_name = Column(String)
     comments = Column(String)
     crop_quality_rating = Column(Integer)

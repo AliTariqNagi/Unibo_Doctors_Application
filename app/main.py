@@ -594,13 +594,47 @@ async def get_unique_patients(
 from sqlalchemy.sql import or_
 
 
+# @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
+# async def get_patient_images(
+#     persona_digits: str,
+#     validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
+#     db: Session = Depends(get_db)
+# ):
+    
+#     query = db.query(SkinDiseaseImage).filter(
+#         SkinDiseaseImage.persona_digits == persona_digits
+#     )
+
+#     if validation_status == "validated":
+#         query = query.filter(SkinDiseaseImage.doctor_name.isnot(None), SkinDiseaseImage.doctor_name != '')
+#     elif validation_status == "unvalidated":
+#         query = query.filter(or_(SkinDiseaseImage.doctor_name.is_(None), SkinDiseaseImage.doctor_name == ''))
+    
+#     images_from_db = query.all()
+
+#     if not images_from_db:
+#         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient with the specified validation status in the database.")
+
+#     images_data = []
+#     for img_entry in images_from_db:
+#         images_data.append(PatientImageMetadata(
+#             image_path=img_entry.image_path,
+#             image_name=img_entry.image_name,
+#             mask_path=img_entry.mask_path,
+#             mask_name=img_entry.mask_name
+#         ))
+    
+#     images_data.sort(key=lambda x: x.image_name) 
+    
+#     return images_data
+
+
 @app.get("/patient_images/{persona_digits}", response_model=List[PatientImageMetadata])
 async def get_patient_images(
     persona_digits: str,
     validation_status: Optional[str] = Query("all", description="Filter by validation status: 'all', 'validated', 'unvalidated'"),
     db: Session = Depends(get_db)
 ):
-    
     query = db.query(SkinDiseaseImage).filter(
         SkinDiseaseImage.persona_digits == persona_digits
     )
@@ -609,24 +643,140 @@ async def get_patient_images(
         query = query.filter(SkinDiseaseImage.doctor_name.isnot(None), SkinDiseaseImage.doctor_name != '')
     elif validation_status == "unvalidated":
         query = query.filter(or_(SkinDiseaseImage.doctor_name.is_(None), SkinDiseaseImage.doctor_name == ''))
-    
+
     images_from_db = query.all()
 
     if not images_from_db:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="No images found for this patient with the specified validation status in the database.")
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, 
+            detail="No images found for this patient with the specified validation status in the database."
+        )
 
-    images_data = []
+    # ✅ Deduplicate by image_path (keep first entry)
+    unique_images = {}
     for img_entry in images_from_db:
-        images_data.append(PatientImageMetadata(
-            image_path=img_entry.image_path,
-            image_name=img_entry.image_name,
-            mask_path=img_entry.mask_path,
-            mask_name=img_entry.mask_name
-        ))
-    
-    images_data.sort(key=lambda x: x.image_name) 
-    
+        if img_entry.image_path not in unique_images:
+            unique_images[img_entry.image_path] = PatientImageMetadata(
+                image_path=img_entry.image_path,
+                image_name=img_entry.image_name,
+                mask_path=img_entry.mask_path,
+                mask_name=img_entry.mask_name
+            )
+
+    images_data = list(unique_images.values())
+    images_data.sort(key=lambda x: x.image_name)
+
     return images_data
+
+
+
+
+# @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
+# async def classify_skin_tone(
+#     persona_digits: str,
+#     classification_data: SkinToneClassificationRequest, 
+#     db: Session = Depends(get_db)
+# ):
+    
+#     try:
+        
+
+#         skin_disease_images = db.query(SkinDiseaseImage).filter(
+#             SkinDiseaseImage.persona_digits == persona_digits
+#         ).all()
+
+#         if not skin_disease_images:
+#             raise HTTPException(
+#                 status_code=HTTPStatus.NOT_FOUND,
+#                 detail=f"No SkinDiseaseImage entries found for persona_digits {persona_digits}."
+#             )
+
+#         updated_count = 0
+#         created_count = 0
+
+#         for image_entry in skin_disease_images:
+            
+#             image_name_log = image_entry.image_name
+#             image_path_log = image_entry.image_path
+#             mask_name_log = image_entry.mask_name
+#             mask_path_log = image_entry.mask_path
+#             crop_image_name_log = image_entry.crop_image_name
+#             crop_image_path_log = image_entry.crop_image_path
+#             crop_mask_name_log = image_entry.crop_mask_name
+#             crop_mask_path_log = image_entry.crop_mask_path
+
+#             # Always create a new entry in SkinToneClassification (logging each classification event)
+#             # new_classification_log = SkinToneClassification(
+#             #     persona_digits=persona_digits,
+#             #     doctor_name=classification_data.doctor_name,
+#             #     fitzpatrick_scale=classification_data.fitzpatrick_scale,
+#             #     image_name=image_name_log,
+#             #     image_path=image_path_log,
+#             #     mask_name=mask_name_log,
+#             #     mask_path=mask_path_log,
+#             #     crop_image_name=crop_image_name_log,
+#             #     crop_image_path=crop_image_path_log,
+#             #     crop_mask_name=crop_mask_name_log,
+#             #     crop_mask_path=crop_mask_path_log
+#             # )
+#             # db.add(new_classification_log)
+
+            
+#             if image_entry.doctor_name is None or image_entry.doctor_name == "":
+                
+#                 image_entry.doctor_name = classification_data.doctor_name
+#                 image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
+#                 image_entry.confidence_level = classification_data.confidence
+#                 updated_count += 1
+#                 print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
+#             else:
+                
+#                 new_skin_disease_image_entry = SkinDiseaseImage(
+#                     disease_name_amended=image_entry.disease_name_amended,
+#                     disease_name=image_entry.disease_name,
+#                     persona_digits=image_entry.persona_digits,
+#                     example_digit=image_entry.example_digit,
+#                     image_name=image_entry.image_name,
+#                     mask_name=image_entry.mask_name,
+#                     image_path=image_entry.image_path,
+#                     mask_path=image_entry.mask_path,
+#                     crop_image_name=image_entry.crop_image_name,
+#                     crop_image_path=image_entry.crop_image_path,
+#                     crop_mask_name=image_entry.crop_mask_name,
+#                     crop_mask_path=image_entry.crop_mask_path,
+                    
+#                     doctor_name=classification_data.doctor_name,
+#                     fitzpatrick_scale=classification_data.fitzpatrick_scale,
+#                     confidence_level = classification_data.confidence,
+                    
+#                     rating=image_entry.rating,
+#                     comments=image_entry.comments,
+#                     category=image_entry.category,
+#                     years_of_experience=image_entry.years_of_experience,
+#                     real_generated=image_entry.real_generated,
+#                     realism_rating=image_entry.realism_rating,
+#                     image_precision=image_entry.image_precision,
+#                     skin_color_precision=image_entry.skin_color_precision,
+#                     #confidence_level=image_entry.confidence_level,
+#                     crop_quality_rating=image_entry.crop_quality_rating,
+#                     crop_diagnosis=image_entry.crop_diagnosis,
+#                     created_at=datetime.now(ZoneInfo("Europe/Rome"))
+#                 )
+#                 db.add(new_skin_disease_image_entry)
+#                 created_count += 1
+#                 print(f"Created new SkinDiseaseImage entry for {image_entry.image_name} with ID {new_skin_disease_image_entry.id}")
+
+#         db.commit()
+
+#         return {"message": f"Classification submitted for patient {persona_digits}. {updated_count} existing records updated, {created_count} new records created."}
+
+#     except Exception as e:
+#         db.rollback()
+#         print(f"Error classifying skin tone for {persona_digits}: {e}")
+#         raise HTTPException(
+#             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+#             detail=f"An unexpected error occurred during classification: {e}"
+#         )
 
 
 @app.post("/classify_skin_tone/{persona_digits}", response_model=SkinToneClassificationResponse, status_code=HTTPStatus.CREATED)
@@ -635,10 +785,7 @@ async def classify_skin_tone(
     classification_data: SkinToneClassificationRequest, 
     db: Session = Depends(get_db)
 ):
-    
     try:
-        
-
         skin_disease_images = db.query(SkinDiseaseImage).filter(
             SkinDiseaseImage.persona_digits == persona_digits
         ).all()
@@ -651,43 +798,20 @@ async def classify_skin_tone(
 
         updated_count = 0
         created_count = 0
+        processed_images = set()  
 
         for image_entry in skin_disease_images:
-            
-            image_name_log = image_entry.image_name
-            image_path_log = image_entry.image_path
-            mask_name_log = image_entry.mask_name
-            mask_path_log = image_entry.mask_path
-            crop_image_name_log = image_entry.crop_image_name
-            crop_image_path_log = image_entry.crop_image_path
-            crop_mask_name_log = image_entry.crop_mask_name
-            crop_mask_path_log = image_entry.crop_mask_path
+            if image_entry.image_path in processed_images:
+                continue
+            processed_images.add(image_entry.image_path)
 
-            # Always create a new entry in SkinToneClassification (logging each classification event)
-            # new_classification_log = SkinToneClassification(
-            #     persona_digits=persona_digits,
-            #     doctor_name=classification_data.doctor_name,
-            #     fitzpatrick_scale=classification_data.fitzpatrick_scale,
-            #     image_name=image_name_log,
-            #     image_path=image_path_log,
-            #     mask_name=mask_name_log,
-            #     mask_path=mask_path_log,
-            #     crop_image_name=crop_image_name_log,
-            #     crop_image_path=crop_image_path_log,
-            #     crop_mask_name=crop_mask_name_log,
-            #     crop_mask_path=crop_mask_path_log
-            # )
-            # db.add(new_classification_log)
-
-            
-            if image_entry.doctor_name is None or image_entry.doctor_name == "":
-                
+            if not image_entry.doctor_name:  # None or empty
                 image_entry.doctor_name = classification_data.doctor_name
                 image_entry.fitzpatrick_scale = classification_data.fitzpatrick_scale
+                image_entry.confidence_level = classification_data.confidence
                 updated_count += 1
-                print(f"Updated existing SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
+                print(f"Updated SkinDiseaseImage ID {image_entry.id} for {image_entry.image_name}")
             else:
-                
                 new_skin_disease_image_entry = SkinDiseaseImage(
                     disease_name_amended=image_entry.disease_name_amended,
                     disease_name=image_entry.disease_name,
@@ -701,10 +825,11 @@ async def classify_skin_tone(
                     crop_image_path=image_entry.crop_image_path,
                     crop_mask_name=image_entry.crop_mask_name,
                     crop_mask_path=image_entry.crop_mask_path,
-                    
+
                     doctor_name=classification_data.doctor_name,
                     fitzpatrick_scale=classification_data.fitzpatrick_scale,
-                    
+                    confidence_level=classification_data.confidence,
+
                     rating=image_entry.rating,
                     comments=image_entry.comments,
                     category=image_entry.category,
@@ -713,18 +838,18 @@ async def classify_skin_tone(
                     realism_rating=image_entry.realism_rating,
                     image_precision=image_entry.image_precision,
                     skin_color_precision=image_entry.skin_color_precision,
-                    confidence_level=image_entry.confidence_level,
                     crop_quality_rating=image_entry.crop_quality_rating,
                     crop_diagnosis=image_entry.crop_diagnosis,
                     created_at=datetime.now(ZoneInfo("Europe/Rome"))
                 )
                 db.add(new_skin_disease_image_entry)
                 created_count += 1
-                print(f"Created new SkinDiseaseImage entry for {image_entry.image_name} with ID {new_skin_disease_image_entry.id}")
+                print(f"Created new SkinDiseaseImage entry for {image_entry.image_name}")
 
         db.commit()
 
-        return {"message": f"Classification submitted for patient {persona_digits}. {updated_count} existing records updated, {created_count} new records created."}
+        return {"message": f"Classification submitted for patient {persona_digits}. "
+                           f"{updated_count} unique records updated, {created_count} new records created."}
 
     except Exception as e:
         db.rollback()
@@ -733,6 +858,9 @@ async def classify_skin_tone(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during classification: {e}"
         )
+
+
+
 
 @app.get("/check_skin_disease_images/", response_model=List[SkinDiseaseImageResponse])
 async def get_skin_disease_image_contents(db: Session = Depends(get_db)):
@@ -1196,17 +1324,19 @@ def submit_batch_categorization(
         original_filename = payload.image_filename
         src_path = os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, original_filename)
 
-        if not os.path.exists(src_path):
-            print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
-            continue # Skip
+        # if not os.path.exists(src_path):
+        #     print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
+        #     continue # Skip
 
-        new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR)
+        # new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR)
 
-        if not new_filename:
-            print(f"Could not move the file {original_filename}.")
-            continue
+        # if not new_filename:
+        #     print(f"Could not move the file {original_filename}.")
+        #     continue
 
-        image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
+        #image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
+
+        image_db_path = src_path
 
         db_record = CropImageValidation(
             image_filename = payload.image_filename,
@@ -1214,7 +1344,8 @@ def submit_batch_categorization(
             doctor_name=payload.doctor_name,
             comments=payload.comments,
             crop_diagnosis=payload.crop_diagnosis,
-            fitzpatrick_scale=None, #payload.fitzpatrick_scale,
+            fitzpatrick_scale=payload.fitzpatrick_scale,
+            confidence=payload.confidence,
             created_at=datetime.now(ZoneInfo("Europe/Rome"))
         )
         records_to_add.append(db_record)
@@ -1239,6 +1370,7 @@ def submit_batch_categorization(
                     comments=record.comments,
                     crop_diagnosis=record.crop_diagnosis,
                     fitzpatrick_scale=record.fitzpatrick_scale,
+                    confidence=record.confidence,
                     created_at=record.created_at
                 )
             )
@@ -1333,9 +1465,7 @@ def get_unique_filename(directory: str, original_filename: str) -> str:
 @app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
 async def get_crop_images_for_validation(
     limit: int = 15,
-    db: Session = Depends(get_db)
 ):
-    
     all_image_filenames = [
         f for f in os.listdir(CROP_IMAGES_SOURCE_DIR)
         if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
@@ -1343,16 +1473,12 @@ async def get_crop_images_for_validation(
     ]
     all_image_filenames.sort()
 
-    rated_image_urls = db.query(CropImageRating.image_path).all()
-    rated_image_urls_set = {url[0] for url in rated_image_urls}
-
-    unrated_image_filenames = []
-    for filename in all_image_filenames:
-        full_image_url_path = f"/images/classify_skin_disease_crops_images/{filename}"
-        if full_image_url_path not in rated_image_urls_set:
-            unrated_image_filenames.append(filename)
-
-    random_batch_filenames = random.sample(unrated_image_filenames, min(limit, len(unrated_image_filenames)))
+    num_available_images = len(all_image_filenames)
+    
+    random_batch_filenames = random.sample(
+        all_image_filenames,
+        min(limit, num_available_images)
+    )
 
     image_metadata_list = [
         CropImageMetadata(image_path=f"/images/classify_skin_disease_crops_images/{filename}")
@@ -1369,74 +1495,48 @@ async def submit_crop_validations(
 ):
     
     new_db_entries_count = 0
-    moved_files_count = 0
     errors = []
+
+    
+    
+
 
     for rating_data in batch_data.validations:
         try:
-            
-            existing_entry = db.query(CropImageRating).filter(
-                CropImageRating.image_path == rating_data.image_path
-            ).first()
-
-            if existing_entry:
-                print(f"Warning: Rating for {rating_data.image_path} already exists. Skipping database entry and file move.")
-                continue
-
-            
+           
             new_entry = CropImageRating(
                 image_path=rating_data.image_path,
                 doctor_name=rating_data.doctor_name,
                 comments=rating_data.comments,
-                crop_quality_rating=rating_data.crop_quality_rating,
+                #crop_quality_rating=rating_data.crop_quality_rating,
                 crop_diagnosis=rating_data.crop_diagnosis,
+                confidence=rating_data.confidence,
+                created_at=datetime.now(ZoneInfo("Europe/Rome"))
             )
             db.add(new_entry)
             new_db_entries_count += 1
 
-            
-            relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
-            source_file_abs_path = os.path.join("images", relative_file_path_from_base_static)
+            #relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
+            #source_file_abs_path = os.path.join("images", relative_file_path_from_base_static)
 
-            if not os.path.exists(source_file_abs_path):
-                print(f"File not found for moving: {source_file_abs_path}. Skipping file move.")
-                errors.append(f"File not found for {rating_data.image_path}. (DB entry added)")
-                continue 
 
-            
-            original_basename = os.path.basename(source_file_abs_path)
-            unique_filename_for_destination = get_unique_filename(CATEGORIZED_CROP_IMAGES_DIR, original_basename)
-            destination_file_abs_path = os.path.join(CATEGORIZED_CROP_IMAGES_DIR, unique_filename_for_destination)
-
-            shutil.move(source_file_abs_path, destination_file_abs_path)
-            moved_files_count += 1
-            print(f"DEBUG: Moved {source_file_abs_path} to {destination_file_abs_path}")
-
-        except IntegrityError:
-            db.rollback()
-            errors.append(f"Duplicate entry for image {rating_data.image_path}. This image might have been processed concurrently.")
-            print(f"Error: IntegrityError for {rating_data.image_path}. Rolled back.")
-        except FileNotFoundError as e:
-            db.rollback()
-            errors.append(f"File system error (file not found/permissions) for {rating_data.image_path}: {str(e)}")
-            print(f"Error: FileNotFoundError for {rating_data.image_path}: {str(e)}. Rolled back.")
         except Exception as e:
             db.rollback()
-            errors.append(f"Unexpected error processing {rating_data.image_path}: {str(e)}")
-            print(f"Error: Unexpected exception for {rating_data.image_path}: {str(e)}. Rolled back.")
+            errors.append(f"Unexpected error {rating_data.image_path}: {str(e)}")
+            print(f"Error: Unexpected exception for {rating_data.image_path}: {str(e)}.")
 
     try:
         db.commit()
     except Exception as e:
         db.rollback()
-        errors.append(f"Final database commit failed: {str(e)}")
-        print(f"Error: Final DB commit failed: {str(e)}")
+        errors.append(f"Database commit failed: {str(e)}")
+        print(f"Error: DB commit failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to commit some data: {'; '.join(errors) if errors else 'Unknown error'}"
+            detail=f"Failed to commit data: {'; '.join(errors) if errors else 'Unknown error'}"
         )
 
-    message = f"Successfully processed {new_db_entries_count} ratings. {moved_files_count} files moved."
+    message = f"Successfully processed {new_db_entries_count} ratings."
     if errors:
         message += f" Some issues occurred: {', '.join(errors)}"
         raise HTTPException(
@@ -1495,16 +1595,16 @@ async def get_next_crop_quality_rating_image(db: Session = Depends(get_db)):
     all_image_filenames.sort()
 
     
-    rated_image_urls = db.query(CropImageQualityRating.image_path).filter(
-        CropImageQualityRating.image_path.like(f"/images/crop_quality_rating_images/%")
-    ).all()
-    rated_image_urls_set = {url[0] for url in rated_image_urls}
+    #rated_image_urls = db.query(CropImageQualityRating.image_path).filter(
+    #    CropImageQualityRating.image_path.like(f"/images/crop_quality_rating_images/%")
+    #).all()
+    #rated_image_urls_set = {url[0] for url in rated_image_urls}
 
     unrated_image_filenames = []
     for filename in all_image_filenames:
-        full_image_url_path = f"/images/crop_quality_rating_images/{filename}"
-        if full_image_url_path not in rated_image_urls_set:
-            unrated_image_filenames.append(filename)
+        #full_image_url_path = f"/images/crop_quality_rating_images/{filename}"
+        #if full_image_url_path not in rated_image_urls_set:
+        unrated_image_filenames.append(filename)
 
     if not unrated_image_filenames:
         return None 
@@ -1523,15 +1623,15 @@ async def submit_crop_quality_rating(
     
     try:
         
-        existing_entry = db.query(CropImageQualityRating).filter(
-            CropImageQualityRating.image_path == rating_data.image_path
-        ).first()
+        # existing_entry = db.query(CropImageQualityRating).filter(
+        #     CropImageQualityRating.image_path == rating_data.image_path
+        # ).first()
 
-        if existing_entry:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Image {rating_data.image_path} has already been rated."
-            )
+        # if existing_entry:
+        #     raise HTTPException(
+        #         status_code=status.HTTP_409_CONFLICT,
+        #         detail=f"Image {rating_data.image_path} has already been rated."
+        #     )
 
         
         new_entry = CropImageQualityRating(
@@ -1539,46 +1639,24 @@ async def submit_crop_quality_rating(
             doctor_name=rating_data.doctor_name,
             comments=rating_data.comments,
             crop_quality_rating=rating_data.crop_quality_rating,
+            created_at=datetime.now(ZoneInfo("Europe/Rome")),
 
         )
         db.add(new_entry)
         db.commit() 
         db.refresh(new_entry)
 
-        relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
-        source_file_abs_path = os.path.join(STATIC_DIR, relative_file_path_from_base_static)
+        #relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
+        #source_file_abs_path = os.path.join(STATIC_DIR, relative_file_path_from_base_static)
+        
+        return {"message": "Rating submitted!"}
 
-        if not os.path.exists(source_file_abs_path):
-            print(f"File not found for moving: {source_file_abs_path}. DB entry created, but file not moved.")
-            return {"message": f"Rating saved, but file {os.path.basename(source_file_abs_path)} not found for moving."}
-
-        original_basename = os.path.basename(source_file_abs_path)
-        unique_filename_for_destination = get_unique_filename(CROP_QUALITY_RATING_CHECKED_DIR, original_basename)
-        destination_file_abs_path = os.path.join(CROP_QUALITY_RATING_CHECKED_DIR, unique_filename_for_destination)
-
-        shutil.move(source_file_abs_path, destination_file_abs_path)
-        print(f"DEBUG: Moved {source_file_abs_path} to {destination_file_abs_path}")
-
-        return {"message": "Rating submitted and image moved successfully!"}
-
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Rating for image {rating_data.image_path} already exists. Cannot re-rate."
-        )
-    except FileNotFoundError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"File system error (file not found/permissions) for {rating_data.image_path}: {str(e)}"
-        )
     except Exception as e:
         db.rollback()
-        print(f"Error processing rating for {rating_data.image_path}: {str(e)}")
+        print(f"Error processing {rating_data.image_path}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unexpected error processing rating for {rating_data.image_path}: {str(e)}"
+            detail=f"Unexpected error processing for {rating_data.image_path}: {str(e)}"
         )
 
 

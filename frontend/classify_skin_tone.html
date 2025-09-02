@@ -182,7 +182,7 @@
       <option value="6">6 - Mostly confident</option>
       <option value="7">7 - Extremely confident</option>
     </select>
-    <button id="classify-button" disabled>Classify</button>
+    <button id="classify-button" disabled>Submit</button>
     <div id="message-container"></div>
     <div id="error-container"></div>
   </div>
@@ -310,10 +310,20 @@
             });
 
             if (response.ok) {
-            messageContainer.textContent = "Classification submitted successfully!";
+            messageContainer.textContent = "Submitted successfully!";
             fitzpatrickScaleSelect.value = "";
             confidenceScoreSelect.value = "";
             classifyButton.disabled = true;
+            
+            await loadUniquePatients(validationStatusSelect.value);
+              if (patientSelect.value) {
+                await loadPatientImages(patientSelect.value, validationStatusSelect.value);
+              } else {
+                patientImagesGrid.innerHTML = "";
+                classificationForm.style.display = "none";
+              }
+
+
             } else {
             const err = await response.json();
             errorContainer.textContent = err.detail || "Error submitting classification.";

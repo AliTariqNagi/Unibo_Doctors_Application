@@ -52,18 +52,18 @@
             color: #dc3545;
         }
     </style>
-    <!-- Include SheetJS library from CDN for Excel generation -->
+
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Download Crops Quality Rating Data</h1>
+        <h1>Download Crop Images Quality Rating Data</h1>
         <button id="downloadExcelBtn">Download Excel File</button>
         <div id="statusMessage" class="message"></div>
     </div>
 
     <script>
-        // IMPORTANT: Ensure this URL matches where your FastAPI backend is running
+
         const backendUrl = "https://medicalimages.apice.unibo.it"; 
         const downloadExcelBtn = document.getElementById("downloadExcelBtn");
         const statusMessage = document.getElementById("statusMessage");
@@ -73,7 +73,7 @@
             statusMessage.className = "message";
 
             try {
-                // Fetch data from the new backend route
+    
                 const response = await fetch(`${backendUrl}/get_excel_data_categorized_doctor_skin_disease_crops_rating_single_image/`);
 
                 if (!response.ok) {
@@ -81,7 +81,7 @@
                     throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
                 }
 
-                // Parse the response as JSON
+        
                 const jsonData = await response.json();
                 
                 if (jsonData.length === 0) {
@@ -90,10 +90,10 @@
                     return;
                 }
 
-                // --- Convert JSON to Excel using SheetJS ---
+                
                 const ws = XLSX.utils.json_to_sheet(jsonData);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "SingleImageRatings");
+                XLSX.utils.book_append_sheet(wb, ws, "SkinDiseaseData");
 
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
 
@@ -110,7 +110,7 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = 'Crops_images_quality_ratings.xlsx'; // New suggested filename
+                a.download = 'Crops_images_quality_data.xlsx';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);

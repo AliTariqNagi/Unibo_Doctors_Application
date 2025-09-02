@@ -360,11 +360,19 @@
             return `${backendUrl}/images/categorized_images/${baseName}${suffix}.jpg`; // Assuming .jpg extension
         }
 
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
         async function loadBaseNames() {
             try {
                 const response = await fetch(`${backendUrl}/get_all_base_names`);
                 if (!response.ok) throw new Error('Failed to load base image names');
                 allBaseNames = await response.json();
+                shuffleArray(allBaseNames);
             } catch (error) {
                 console.error(error);
                 messageContainer.textContent = 'Failed to load images.';
@@ -389,6 +397,20 @@
                 messageContainer.textContent = 'Failed to load doctors.';
             }
         }
+
+        async function resetAndReloadImages() {
+            messageContainer.textContent = 'Reloading new images...';
+            submitButton.disabled = true;
+            nextButton.disabled = true;
+            await loadBaseNames();
+            currentIndex = 0;
+            if (allBaseNames.length > 0) {
+                displayImages(currentIndex);
+            } else {
+                messageContainer.textContent = 'No images found after reload.';
+            }
+        }
+
 
         function displayImages(index) {
             if (index < 0 || index >= allBaseNames.length) {
@@ -436,42 +458,37 @@
             }
         };
 
-        nextButton.onclick = () => {
+        nextButton.onclick = async () => {
             if (currentIndex + 1 < allBaseNames.length) {
                 currentIndex++;
                 displayImages(currentIndex);
             } else {
-                messageContainer.textContent = 'No more images.';
-                submitButton.disabled = true; // Disable submit when no more images
-                nextButton.disabled = true; // Disable next when no more images
+                await resetAndReloadImages();
             }
-        };
+        }
 
-        submitButton.onclick = () => {
+        submitButton.onclick = async () => {
             if (allBaseNames.length === 0) {
                 messageContainer.textContent = 'No images to submit.';
                 return;
             }
 
             const baseName = allBaseNames[currentIndex];
-            
+
             const getRadioStringValue = (name) => {
                 const checkedRadio = document.querySelector(`input[name="${name}"]:checked`);
                 return checkedRadio ? checkedRadio.value : null;
             };
-
 
             const getRadioValue = (name) => {
                 const checkedRadio = document.querySelector(`input[name="${name}"]:checked`);
                 return checkedRadio ? Number(checkedRadio.value) : null;
             };
 
-
             const getSelectValue = (id) => {
                 const selectElement = document.getElementById(id);
                 return selectElement.value !== '' ? selectElement.value : null;
             };
-
 
             if (!doctorNameInput.value) {
                 messageContainer.textContent = 'Please select a Doctor.';
@@ -504,40 +521,38 @@
                 mask_comments: maskCommentsInput.value,
                 real_generated: getRadioStringValue('real_generated'), 
                 realism_rating: getRadioValue('realism_rating'),
-                mask_rating: getRadioValue('mask_rating'), // New field
+                mask_rating: getRadioValue('mask_rating'),
                 image_precision: getSelectValue('image_precision'),
                 confidence_level: getRadioValue('confidence_level'),
             };
-            console.log(JSON.stringify(payload, null, 2));
 
-            fetch(`${backendUrl}/skin_disease_image/update/${encodeURIComponent(baseName)}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            })
-            .then(res => {
+            try {
+                const res = await fetch(`${backendUrl}/skin_disease_image/update/${encodeURIComponent(baseName)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
                 if (!res.ok) {
-                    return res.json().then(err => { throw new Error(err.detail || `HTTP error! status: ${res.status}`); });
+                    const err = await res.json();
+                    throw new Error(err.detail || `HTTP error! status: ${res.status}`);
                 }
-                return res.json();
-            })
-            .then(data => {
+
                 messageContainer.textContent = 'Entry saved successfully!';
-                // Move to next image after successful submission
+
                 if (currentIndex + 1 < allBaseNames.length) {
                     currentIndex++;
                     displayImages(currentIndex);
                 } else {
-                    messageContainer.textContent += ' No more images.';
-                    submitButton.disabled = true;
-                    nextButton.disabled = true;
+                    await resetAndReloadImages();
                 }
-            })
-            .catch(err => {
+
+            } catch (err) {
                 console.error('Error saving entry:', err);
                 messageContainer.textContent = `Failed to save entry: ${err.message}`;
-            });
+            }
         };
+
     </script>
 </body>
 </html>

@@ -22,7 +22,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 90%; /* Make container wider for data display */
+            width: 90%; 
             max-width: 800px;
         }
         h1 {
@@ -38,7 +38,7 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s ease;
-            margin-bottom: 20px; /* Add margin below button */
+            margin-bottom: 20px; 
         }
         button:hover {
             background-color: #0056b3;
@@ -46,26 +46,26 @@
         .message {
             margin-top: 20px;
             font-weight: bold;
-            color: #28a745; /* Green for success */
+            color: #28a745; 
         }
         .error {
-            color: #dc3545; /* Red for error */
+            color: #dc3545; 
         }
     </style>
-    <!-- Include SheetJS library from CDN for Excel generation -->
+    
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Download Skin Disease Crops Rating in Excel File</h1>
+        <h1>Download Skin Disease Crops Rating Data</h1>
         <button id="downloadExcelBtn">Download Excel File</button>
         <div id="statusMessage" class="message"></div>
     </div>
 
     <script>
-        // IMPORTANT: Ensure this URL matches where your FastAPI backend is running
+        
         const backendUrl = "https://medicalimages.apice.unibo.it"; 
-        const downloadExcelBtn = document.getElementById("downloadExcelBtn"); // Renamed button ID
+        const downloadExcelBtn = document.getElementById("downloadExcelBtn"); 
         const statusMessage = document.getElementById("statusMessage");
 
         downloadExcelBtn.addEventListener("click", async () => {
@@ -80,7 +80,7 @@
                     throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
                 }
 
-                // Parse the response as JSON (as the backend route returns JSON)
+                
                 const jsonData = await response.json();
                 
                 if (jsonData.length === 0) {
@@ -89,15 +89,14 @@
                     return;
                 }
 
-                // --- Convert JSON to Excel using SheetJS ---
-                // Create a new worksheet from JSON data
+                
                 const ws = XLSX.utils.json_to_sheet(jsonData);
 
-                // Create a new workbook
+                
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "ImageRatings"); // Add the worksheet to the workbook
+                XLSX.utils.book_append_sheet(wb, ws, "SkinDiseaseData"); 
 
-                // Write the workbook to a binary string
+                
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
 
                 // Function to convert binary string to ArrayBuffer
@@ -116,10 +115,10 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = 'crop_image_data.xlsx'; // Suggested filename for download
+                a.download = 'crop_image_data.xlsx'; 
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url); // Clean up the URL object
+                window.URL.revokeObjectURL(url);
 
                 statusMessage.textContent = "Excel file downloaded successfully!";
 

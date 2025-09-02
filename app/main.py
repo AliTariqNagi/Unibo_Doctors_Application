@@ -1110,18 +1110,18 @@ def submit_validation(
     crop_mask_src_file = os.path.join(BASE_IMAGE_DIR, f"categorized_images/{base_name}_crop_mask.jpg")
 
     
-    crop_new_filename, crop_abs_path = move_to_target_directory_with_unique_name(crop_image_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
-    crop_mask_new_filename, crop_mask_abs_path = move_to_target_directory_with_unique_name(crop_mask_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
+    #crop_new_filename, crop_abs_path = move_to_target_directory_with_unique_name(crop_image_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
+    #crop_mask_new_filename, crop_mask_abs_path = move_to_target_directory_with_unique_name(crop_mask_src_file, CATEGORIZE_IMAGES_DIRECTORY_TARGET)
 
-    crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
-    crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
+    #crop_db_path = f"/images/categorized_images_crops_categorized/{crop_new_filename}" if crop_new_filename else None
+    #crop_mask_db_path = f"/images/categorized_images_crops_categorized/{crop_mask_new_filename}" if crop_mask_new_filename else None
 
     
     db_row = DoctorImageValidation(
         image_path=None,
         mask_path=None,
-        crop_path=crop_db_path,
-        crop_mask_path=crop_mask_db_path,
+        crop_path=f"/images/categorized_images/{base_name}_crop.jpg", #crop_db_path,
+        crop_mask_path=f"/images/categorized_images/{base_name}_crop_mask.jpg", #crop_mask_db_path,
         doctor_name=payload.doctor_name, #--------------DONE
         mask_rating=payload.mask_rating,   #--------------DONE
         comments=payload.comments,   #--------------DONE

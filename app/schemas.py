@@ -201,6 +201,11 @@ class DoctorImageValidationUpdateRequest(BaseModel):
         orm_mode = True
 
 
+class CropImageBatchResponse(BaseModel):
+    image_filename: str
+    disease_name: str
+    image_type: str = "synthetic"
+    image_path: str
 
 class CropImageValidationRequest(BaseModel):
     image_filename: str # This will be the original filename (e.g., "crop1.jpg")
@@ -212,6 +217,8 @@ class CropImageValidationRequest(BaseModel):
     confidence: int
     #fitzpatrick_scale: str # Assuming Fitzpatrick is a string 'I', 'II', etc.
     #image_filename : str
+    disease_name: str
+    type: str = "synthetic"
 
 
 class CropImageValidationResponse(BaseModel): 
@@ -225,6 +232,8 @@ class CropImageValidationResponse(BaseModel):
     #fitzpatrick_scale_score: int
     confidence: int
     created_at: datetime
+    type: str
+    source_disease_name: str
 
     class Config:
         orm_mode = True
@@ -271,6 +280,8 @@ class BatchCropImageRatingRequest(BaseModel):
 
 class CropImageMetadata(BaseModel):
     image_path: str
+    disease_name: str
+    patient_id: str
 
 
 

@@ -1552,64 +1552,204 @@ def get_unique_filename(directory: str, original_filename: str) -> str:
 
 
 
-@app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
-async def get_crop_images_for_validation(
-    limit: int = 15,
-):
-    all_image_filenames = [
-        f for f in os.listdir(CROP_IMAGES_SOURCE_DIR)
-        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
-           os.path.isfile(os.path.join(CROP_IMAGES_SOURCE_DIR, f))
-    ]
-    all_image_filenames.sort()
+# @app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
+# async def get_crop_images_for_validation(
+#     limit: int = 15,
+# ):
+#     all_image_filenames = [
+#         f for f in os.listdir(CROP_IMAGES_SOURCE_DIR)
+#         if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')) and
+#            os.path.isfile(os.path.join(CROP_IMAGES_SOURCE_DIR, f))
+#     ]
+#     all_image_filenames.sort()
 
-    num_available_images = len(all_image_filenames)
+#     num_available_images = len(all_image_filenames)
     
-    random_batch_filenames = random.sample(
-        all_image_filenames,
-        min(limit, num_available_images)
-    )
+#     random_batch_filenames = random.sample(
+#         all_image_filenames,
+#         min(limit, num_available_images)
+#     )
 
-    image_metadata_list = [
-        CropImageMetadata(image_path=f"/images/classify_skin_disease_crops_images/{filename}")
-        for filename in random_batch_filenames
-    ]
+#     image_metadata_list = [
+#         CropImageMetadata(image_path=f"/images/classify_skin_disease_crops_images/{filename}")
+#         for filename in random_batch_filenames
+#     ]
 
-    return image_metadata_list
+#     return image_metadata_list
 
+
+# app/main.py
+import os, random
+from typing import List
+from fastapi import HTTPException, status
+from .schemas import CropImageMetadata  # will update this schema below
+
+# point this to the folder that contains "disease" directories
+IMAGES_REAL_DIR = os.path.join("images", "real")  # adjust STATIC_DIR if needed
+REAL_URL_PREFIX = "/images/real"  # how the static files are exposed (prefix in your URLs)
+
+@app.get("/crop_images_for_validation/", response_model=List[CropImageMetadata])
+async def get_crop_images_for_validation(limit: int = 15):
+    """
+    Pick ONE random disease dir, ONE random patient dir under it,
+    then sample up to `limit` images from <patient>/crops.
+    """
+    if not os.path.isdir(IMAGES_REAL_DIR):
+        raise HTTPException(status_code=500, detail=f"Missing directory: {IMAGES_REAL_DIR}")
+
+    # 1) choose random disease
+    diseases = [d for d in os.listdir(IMAGES_REAL_DIR)
+                if os.path.isdir(os.path.join(IMAGES_REAL_DIR, d))]
+    if not diseases:
+        raise HTTPException(status_code=404, detail="No disease directories found.")
+    disease = random.choice(diseases)
+
+    # 2) choose random patient under that disease
+    disease_path = os.path.join(IMAGES_REAL_DIR, disease)
+    patients = [p for p in os.listdir(disease_path)
+                if os.path.isdir(os.path.join(disease_path, p))]
+    if not patients:
+        raise HTTPException(status_code=404, detail=f"No patient directories found under disease {disease}.")
+    patient = random.choice(patients)
+
+    # 3) list images from crops/
+    crops_dir = os.path.join(disease_path, patient, "crops")
+    if not os.path.isdir(crops_dir):
+        raise HTTPException(status_code=404, detail=f"No crops directory for {disease}/{patient}.")
+
+    exts = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")
+    all_files = [f for f in os.listdir(crops_dir)
+                 if f.lower().endswith(exts) and os.path.isfile(os.path.join(crops_dir, f))]
+    if not all_files:
+        return []
+
+    sample = random.sample(all_files, min(limit, len(all_files)))
+
+    # 4) build URLs
+    results = []
+    for fname in sample:
+        # URL path your frontend can load directly
+        url_path = f"{REAL_URL_PREFIX}/{disease}/{patient}/crops/{fname}"
+        results.append(CropImageMetadata(
+            image_path=url_path,
+            disease_name=disease,
+            patient_id=patient,
+        ))
+
+    return results
+
+
+
+
+
+# @app.post("/submit_crop_validations/", status_code=status.HTTP_201_CREATED)
+# async def submit_crop_validations(
+#     batch_data: BatchCropImageRatingRequest,
+#     db: Session = Depends(get_db)
+# ):
+    
+#     new_db_entries_count = 0
+#     errors = []
+
+    
+    
+
+
+#     for rating_data in batch_data.validations:
+#         try:
+           
+#             new_entry = CropImageRating(
+#                 image_path=rating_data.image_path,
+#                 doctor_name=rating_data.doctor_name,
+#                 comments=rating_data.comments,
+#                 #crop_quality_rating=rating_data.crop_quality_rating,
+#                 crop_diagnosis=rating_data.crop_diagnosis,
+#                 confidence=rating_data.confidence,
+#                 created_at=datetime.now(ZoneInfo("Europe/Rome"))
+#             )
+#             db.add(new_entry)
+#             new_db_entries_count += 1
+
+#             #relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
+#             #source_file_abs_path = os.path.join("images", relative_file_path_from_base_static)
+
+
+#         except Exception as e:
+#             db.rollback()
+#             errors.append(f"Unexpected error {rating_data.image_path}: {str(e)}")
+#             print(f"Error: Unexpected exception for {rating_data.image_path}: {str(e)}.")
+
+#     try:
+#         db.commit()
+#     except Exception as e:
+#         db.rollback()
+#         errors.append(f"Database commit failed: {str(e)}")
+#         print(f"Error: DB commit failed: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to commit data: {'; '.join(errors) if errors else 'Unknown error'}"
+#         )
+
+#     message = f"Successfully processed {new_db_entries_count} ratings."
+#     if errors:
+#         message += f" Some issues occurred: {', '.join(errors)}"
+#         raise HTTPException(
+#             status_code=status.HTTP_207_MULTI_STATUS,
+#             detail={"message": message, "errors": errors}
+#         )
+
+#     return {"message": message}
+
+
+# app/main.py
+from urllib.parse import urlparse
+
+def parse_disease_and_patient_from_image_path(image_path: str):
+    """
+    Expect paths like: /images/real/<disease>/<patient>/crops/<file>
+    Returns (disease, patient) or (None, None) if not match.
+    """
+    # strip query etc.
+    path = urlparse(image_path).path
+    parts = [p for p in path.split("/") if p]  # remove empty
+
+    # parts should be: ["images","real", "<disease>", "<patient>", "crops", "<file>"]
+    try:
+        images_idx = parts.index("images")
+        # ensure structure
+        if parts[images_idx + 1] != "real":
+            return (None, None)
+        disease = parts[images_idx + 2]
+        patient = parts[images_idx + 3]
+        # parts[images_idx + 4] should be "crops"
+        return (disease, patient)
+    except Exception:
+        return (None, None)
 
 @app.post("/submit_crop_validations/", status_code=status.HTTP_201_CREATED)
 async def submit_crop_validations(
     batch_data: BatchCropImageRatingRequest,
     db: Session = Depends(get_db)
 ):
-    
     new_db_entries_count = 0
     errors = []
 
-    
-    
-
-
     for rating_data in batch_data.validations:
         try:
-           
+            disease, patient = parse_disease_and_patient_from_image_path(rating_data.image_path)
             new_entry = CropImageRating(
                 image_path=rating_data.image_path,
                 doctor_name=rating_data.doctor_name,
                 comments=rating_data.comments,
-                #crop_quality_rating=rating_data.crop_quality_rating,
                 crop_diagnosis=rating_data.crop_diagnosis,
                 confidence=rating_data.confidence,
+                # NEW:
+                source_disease_name=disease,
+                patient_id=patient,
                 created_at=datetime.now(ZoneInfo("Europe/Rome"))
             )
             db.add(new_entry)
             new_db_entries_count += 1
-
-            #relative_file_path_from_base_static = rating_data.image_path.replace("/images/", "", 1)
-            #source_file_abs_path = os.path.join("images", relative_file_path_from_base_static)
-
-
         except Exception as e:
             db.rollback()
             errors.append(f"Unexpected error {rating_data.image_path}: {str(e)}")
@@ -1620,7 +1760,6 @@ async def submit_crop_validations(
     except Exception as e:
         db.rollback()
         errors.append(f"Database commit failed: {str(e)}")
-        print(f"Error: DB commit failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to commit data: {'; '.join(errors) if errors else 'Unknown error'}"
@@ -1628,13 +1767,12 @@ async def submit_crop_validations(
 
     message = f"Successfully processed {new_db_entries_count} ratings."
     if errors:
-        message += f" Some issues occurred: {', '.join(errors)}"
-        raise HTTPException(
-            status_code=status.HTTP_207_MULTI_STATUS,
-            detail={"message": message, "errors": errors}
-        )
-
+        # If you want multi-status semantics:
+        raise HTTPException(status_code=status.HTTP_207_MULTI_STATUS,
+                            detail={"message": message, "errors": errors})
     return {"message": message}
+
+
 
 
 @app.get("/get_excel_data_categorized_doctor_skin_disease_crops_rating_batch/")

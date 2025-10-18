@@ -1291,25 +1291,74 @@ os.makedirs(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, exist_ok=True)
 os.makedirs(CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR, exist_ok=True)
 
 
-@app.get("/get_crop_image_batch", response_model=List[str])
-async def get_crop_image_batch(db: Session = Depends(get_db)):     
-    try:
+# @app.get("/get_crop_image_batch", response_model=List[str])
+# async def get_crop_image_batch(db: Session = Depends(get_db)):     
+#     try:
      
-        if not os.path.exists(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR):
-            logger.error(f"Image directory does NOT exist: {CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR}")
-            raise HTTPException(status_code=500, detail=f"Image directory not found: {CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR}")
+#         if not os.path.exists(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR):
+#             logger.error(f"Image directory does NOT exist: {CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR}")
+#             raise HTTPException(status_code=500, detail=f"Image directory not found: {CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR}")
 
-        all_image_filenames = [
-            f for f in os.listdir(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR)
-            if os.path.isfile(os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+#         all_image_filenames = [
+#             f for f in os.listdir(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR)
+#             if os.path.isfile(os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+#         ]
+#         all_image_filenames.sort()
+
+#         return all_image_filenames 
+
+#     except Exception as error_:
+#         logger.exception("Error in get_crop_image_batch endpoint:")
+#         raise HTTPException(status_code=500, detail=f"Error retrieving image batch: {str(error_)}")
+
+
+import random
+from app.schemas import CropImageBatchResponse
+
+STATIC_IMAGES_DIR = os.path.join("images", "synthetic")
+
+@app.get("/get_crop_image_batch", response_model=List[CropImageBatchResponse])
+async def get_crop_image_batch():
+    try:
+        if not os.path.exists(STATIC_IMAGES_DIR):
+            raise HTTPException(status_code=500, detail=f"Synthetic images directory not found{STATIC_IMAGES_DIR}")
+
+        disease_folders = [
+            d for d in os.listdir(STATIC_IMAGES_DIR)
+            if os.path.isdir(os.path.join(STATIC_IMAGES_DIR, d))
         ]
-        all_image_filenames.sort()
+        if not disease_folders:
+            raise HTTPException(status_code=500, detail="No disease folders found")
 
-        return all_image_filenames 
+        disease_name = random.choice(disease_folders)
+        disease_path = os.path.join(STATIC_IMAGES_DIR, disease_name)
 
-    except Exception as error_:
-        logger.exception("Error in get_crop_image_batch endpoint:")
-        raise HTTPException(status_code=500, detail=f"Error retrieving image batch: {str(error_)}")
+        all_images = [
+            f for f in os.listdir(disease_path)
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+        ]
+
+        if not all_images:
+            raise HTTPException(status_code=404, detail=f"No images in disease folder {disease_name}")
+
+        selected_images = random.sample(all_images, min(15, len(all_images)))
+
+        response = [
+            {
+                "image_filename": img,
+                "disease_name": disease_name,
+                "image_type": "synthetic",
+                "image_path": f"/images/synthetic/{disease_name}/{img}"
+            }
+            for img in selected_images
+        ]
+
+        return response
+
+    except Exception as e:
+        logger.exception("Error in get_crop_image_batch:")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/submit_batch_categorization", response_model=List[CropImageValidationResponse])
@@ -1317,70 +1366,111 @@ def submit_batch_categorization(
     payloads: List[CropImageValidationRequest],
     db: Session = Depends(get_db)
 ):
-
     records_to_add = []
-    
+
     for payload in payloads:
-        original_filename = payload.image_filename
-        src_path = os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, original_filename)
-
-        # if not os.path.exists(src_path):
-        #     print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
-        #     continue # Skip
-
-        # new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR)
-
-        # if not new_filename:
-        #     print(f"Could not move the file {original_filename}.")
-        #     continue
-
-        #image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
-
-        image_db_path = src_path
+        src_path = os.path.join(STATIC_IMAGES_DIR, payload.disease_name, payload.image_filename)
 
         db_record = CropImageValidation(
-            image_filename = payload.image_filename,
-            image_path=image_db_path,
+            image_filename=payload.image_filename,
+            image_path=src_path,
             doctor_name=payload.doctor_name,
             comments=payload.comments,
             crop_diagnosis=payload.crop_diagnosis,
             fitzpatrick_scale=payload.fitzpatrick_scale,
             confidence=payload.confidence,
-            created_at=datetime.now(ZoneInfo("Europe/Rome"))
+            created_at=datetime.now(ZoneInfo("Europe/Rome")),
+            type=payload.type,
+            source_disease_name=payload.disease_name,
         )
         records_to_add.append(db_record)
 
     try:
-        
-        db.add_all(records_to_add) 
+        db.add_all(records_to_add)
         db.commit()
-        
-        responses_to_return = []
+
+        responses = []
         for record in records_to_add:
-            
-            db.refresh(record) 
+            db.refresh(record)
+            responses.append(record)
 
-            
-            responses_to_return.append(
-                CropImageValidationResponse(
-                    id=record.id,
-                    image_filename=os.path.basename(record.image_filename), 
-                    image_path=record.image_path,
-                    doctor_name=record.doctor_name,
-                    comments=record.comments,
-                    crop_diagnosis=record.crop_diagnosis,
-                    fitzpatrick_scale=record.fitzpatrick_scale,
-                    confidence=record.confidence,
-                    created_at=record.created_at
-                )
-            )
-        
-        return responses_to_return 
+        return responses
 
-    except Exception as error_:
+    except Exception as e:
         db.rollback()
-        print(f"Database transaction failed: {error_}")
-        raise HTTPException(status_code=500, detail=f"Database error during batch submission: {error_}")
+        logger.exception("Database transaction failed")
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+# @app.post("/submit_batch_categorization", response_model=List[CropImageValidationResponse])
+# def submit_batch_categorization(
+#     payloads: List[CropImageValidationRequest],
+#     db: Session = Depends(get_db)
+# ):
+
+#     records_to_add = []
+    
+#     for payload in payloads:
+#         original_filename = payload.image_filename
+#         src_path = os.path.join(CATEGORIZE_IMAGES_CROPS_BATCH_SOURCE_DIR, original_filename)
+
+#         # if not os.path.exists(src_path):
+#         #     print(f"Warning: Image {original_filename} not found at {src_path}. Skipping.")
+#         #     continue # Skip
+
+#         # new_filename, new_abs_path = move_to_target_directory_with_unique_name(src_path, CATEGORIZE_IMAGES_CROPS_BATCH_TARGET_DIR)
+
+#         # if not new_filename:
+#         #     print(f"Could not move the file {original_filename}.")
+#         #     continue
+
+#         #image_db_path = f"/images/categorized_images_crops_categorized/{new_filename}"
+
+#         image_db_path = src_path
+
+#         db_record = CropImageValidation(
+#             image_filename = payload.image_filename,
+#             image_path=image_db_path,
+#             doctor_name=payload.doctor_name,
+#             comments=payload.comments,
+#             crop_diagnosis=payload.crop_diagnosis,
+#             fitzpatrick_scale=payload.fitzpatrick_scale,
+#             confidence=payload.confidence,
+#             created_at=datetime.now(ZoneInfo("Europe/Rome"))
+#         )
+#         records_to_add.append(db_record)
+
+#     try:
+        
+#         db.add_all(records_to_add) 
+#         db.commit()
+        
+#         responses_to_return = []
+#         for record in records_to_add:
+            
+#             db.refresh(record) 
+
+            
+#             responses_to_return.append(
+#                 CropImageValidationResponse(
+#                     id=record.id,
+#                     image_filename=os.path.basename(record.image_filename), 
+#                     image_path=record.image_path,
+#                     doctor_name=record.doctor_name,
+#                     comments=record.comments,
+#                     crop_diagnosis=record.crop_diagnosis,
+#                     fitzpatrick_scale=record.fitzpatrick_scale,
+#                     confidence=record.confidence,
+#                     created_at=record.created_at
+#                 )
+#             )
+        
+#         return responses_to_return 
+
+#     except Exception as error_:
+#         db.rollback()
+#         print(f"Database transaction failed: {error_}")
+#         raise HTTPException(status_code=500, detail=f"Database error during batch submission: {error_}")
 
 
 #########-----------------------------------------------------------------------------------------------------------------------------------###########

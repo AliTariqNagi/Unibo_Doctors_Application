@@ -142,6 +142,8 @@ class CropImageValidation(Base):
     fitzpatrick_scale = Column(String)
     confidence = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
+    type = Column(String, default="synthetic")
+    source_disease_name = Column(String)               
 
 
 
@@ -156,6 +158,8 @@ class CropImageRating(Base):
     crop_diagnosis = Column(String)
     confidence = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
+    source_disease_name = Column(String)
+    patient_id = Column(String)
 
 
 class CropImageQualityRating(Base): 
